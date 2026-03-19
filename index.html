@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanzApp – Control de Gastos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ========= HEADER ========= -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">💰</span>
+        <span class="logo-text">FinanzApp</span>
+      </div>
+      <nav class="nav">
+        <a class="nav-link active" href="#" id="tabCuentas" onclick="switchTab('cuentas')">Cuentas</a>
+        <a class="nav-link"        href="#" id="tabCreditos" onclick="switchTab('creditos')">Créditos</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ========= MAIN: CUENTAS ========= -->
+  <main class="main" id="sectionCuentas">
+
+    <!-- Page title + New-Account button -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mis Cuentas</h1>
+        <p class="page-subtitle">Administra tus cuentas y montos disponibles</p>
+      </div>
+      <button class="btn btn-primary" id="btnNewAccount">
+        <span class="btn-icon">+</span> Nueva Cuenta
+      </button>
+    </div>
+
+    <!-- Summary bar -->
+    <div class="summary-bar">
+      <div class="summary-card">
+        <p class="summary-label">Balance General</p>
+        <div class="summary-value-row">
+          <span class="summary-value" id="totalBalance">$0.00</span>
+          <button class="btn-edit-label" id="btnEditBalance" title="Ajustar monto" onclick="startEditBalance()">✏️</button>
+          <input class="summary-balance-input" id="inputBalanceAmount" type="number" step="0.01"
+            style="display:none" onblur="saveBalance()" onkeydown="if(event.key==='Enter')saveBalance();if(event.key==='Escape')cancelBalance()" />
+        </div>
+      </div>
+      <div class="summary-card">
+        <p class="summary-label">Número de Cuentas</p>
+        <p class="summary-value" id="totalAccounts">0</p>
+      </div>
+    </div>
+
+    <!-- Accounts grid -->
+    <div class="accounts-grid" id="accountsGrid">
+      <!-- Cards rendered by JS -->
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-icon">🏦</div>
+      <h3>No tienes cuentas aún</h3>
+      <p>Agrega tu primera cuenta para empezar a controlar tus finanzas</p>
+      <button class="btn btn-primary" onclick="openNewAccountModal()">Crear primera cuenta</button>
+    </div>
+
+  </main>
+
+  <!-- ========= MAIN: CRÉDITOS ========= -->
+  <main class="main" id="sectionCreditos" style="display:none;">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mis Créditos</h1>
+        <p class="page-subtitle">Administra tus tarjetas y líneas de crédito</p>
+      </div>
+      <button class="btn btn-credit" id="btnNewCredit">
+        <span class="btn-icon">+</span> Nuevo Crédito
+      </button>
+    </div>
+
+    <!-- Credits summary bar -->
+    <div class="summary-bar">
+      <div class="summary-card">
+        <p class="summary-label">Deuda Total</p>
+        <p class="summary-value" id="totalDebt" style="color:var(--expense)">$0.00</p>
+      </div>
+      <div class="summary-card">
+        <p class="summary-label">Crédito Disponible</p>
+        <p class="summary-value" id="totalAvailable" style="color:var(--income)">$0.00</p>
+      </div>
+      <div class="summary-card">
+        <p class="summary-label">Número de Créditos</p>
+        <p class="summary-value" id="totalCredits">0</p>
+      </div>
+    </div>
+
+    <!-- Credits grid -->
+    <div class="accounts-grid" id="creditsGrid">
+      <!-- Cards rendered by JS -->
+    </div>
+
+    <!-- Empty state credits -->
+    <div class="empty-state" id="emptyStateCredits" style="display:none;">
+      <div class="empty-icon">💳</div>
+      <h3>No tienes créditos aún</h3>
+      <p>Agrega tu primera tarjeta o línea de crédito</p>
+      <button class="btn btn-credit" onclick="openNewCreditModal()">Agregar crédito</button>
+    </div>
+
+  </main>
+
+  <!-- ========= MODAL: Nueva Cuenta ========= -->
+  <div class="modal-overlay" id="modalNewAccount">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Nueva Cuenta</h2>
+        <button class="modal-close" id="btnCloseNewAccount">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="inputAccountName">Nombre de la cuenta</label>
+          <input class="form-input" type="text" id="inputAccountName"
+            placeholder="Ej. Cuenta de ahorros, Efectivo..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputAccountIcon">Ícono</label>
+          <div class="icon-picker" id="iconPicker">
+            <span class="icon-option selected" data-icon="🏦">🏦</span>
+            <span class="icon-option" data-icon="💳">💳</span>
+            <span class="icon-option" data-icon="💵">💵</span>
+            <span class="icon-option" data-icon="🏠">🏠</span>
+            <span class="icon-option" data-icon="💼">💼</span>
+            <span class="icon-option" data-icon="📱">📱</span>
+            <span class="icon-option" data-icon="🚗">🚗</span>
+            <span class="icon-option" data-icon="✈️">✈️</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputInitialBalance">Monto inicial</label>
+          <input class="form-input" type="number" id="inputInitialBalance" placeholder="0.00" min="0" step="0.01" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelNew">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveNewAccount">Guardar Cuenta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Ingreso ========= -->
+  <div class="modal-overlay" id="modalIncome">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-income">
+        <h2 class="modal-title">Agregar Ingreso</h2>
+        <button class="modal-close" id="btnCloseIncome">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="incomeAccountName"></p>
+        <div class="form-group">
+          <label class="form-label" for="inputIncomeAmount">Monto a ingresar</label>
+          <input class="form-input input-income" type="number" id="inputIncomeAmount" placeholder="0.00" min="0.01"
+            step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputIncomeDesc">Descripción (opcional)</label>
+          <input class="form-input" type="text" id="inputIncomeDesc" placeholder="Ej. Salario, freelance..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelIncome">Cancelar</button>
+        <button class="btn btn-income" id="btnSaveIncome">+ Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Gasto ========= -->
+  <div class="modal-overlay" id="modalExpense">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-expense">
+        <h2 class="modal-title">Registrar Gasto</h2>
+        <button class="modal-close" id="btnCloseExpense">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="expenseAccountName"></p>
+        <div class="form-group">
+          <label class="form-label" for="inputExpenseAmount">Monto del gasto</label>
+          <input class="form-input input-expense" type="number" id="inputExpenseAmount" placeholder="0.00" min="0.01"
+            step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputExpenseDesc">Descripción (opcional)</label>
+          <input class="form-input" type="text" id="inputExpenseDesc" placeholder="Ej. Supermercado, renta..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelExpense">Cancelar</button>
+        <button class="btn btn-expense" id="btnSaveExpense">- Restar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Eliminar Cuenta ========= -->
+  <div class="modal-overlay" id="modalDelete">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-danger">
+        <h2 class="modal-title">🗑 Eliminar Cuenta</h2>
+        <button class="modal-close" id="btnCloseDelete">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="deleteAccountName"></p>
+        <div class="delete-warning">
+          <p>¿Estás seguro de que deseas eliminar esta cuenta?</p>
+          <p class="delete-warning-note">Los movimientos registrados <strong>no se borrarán</strong> y seguirán
+            disponibles en el historial.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelDelete">Cancelar</button>
+        <button class="btn btn-danger" id="btnConfirmDelete">Eliminar Cuenta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Transferencia ========= -->
+  <div class="modal-overlay" id="modalTransfer">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title">⇄ Transferencia</h2>
+        <button class="modal-close" id="btnCloseTransfer">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="transferOriginName"></p>
+        <div class="form-group">
+          <label class="form-label" for="inputTransferAmount">Monto a transferir</label>
+          <input class="form-input" type="number" id="inputTransferAmount" placeholder="0.00" min="0.01" step="0.01" style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="selectTransferDest">Cuenta o Crédito destino</label>
+          <select class="form-input" id="selectTransferDest" style="appearance:auto; font-family:inherit">
+            <!-- Rendered by JS -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputTransferDesc">Descripción (opcional)</label>
+          <input class="form-input" type="text" id="inputTransferDesc" placeholder="Ej. Ahorro, pago de tarjeta..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelTransfer">Cancelar</button>
+        <button class="btn btn-transfer" id="btnSaveTransfer" style="color:#fff">⇄ Transferir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Pagar Crédito ========= -->
+  <div class="modal-overlay" id="modalPayCredit">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title">💳 Pagar Crédito</h2>
+        <button class="modal-close" id="btnClosePayCredit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="payCreditDestName"></p>
+        <div class="form-group">
+          <label class="form-label" for="selectPayCreditOrigin">Cuenta Origen</label>
+          <select class="form-input" id="selectPayCreditOrigin" style="appearance:auto; font-family:inherit">
+            <!-- Rendered by JS -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputPayCreditAmount">Monto a pagar</label>
+          <input class="form-input" type="number" id="inputPayCreditAmount" placeholder="0.00" min="0.01" step="0.01" style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputPayCreditDesc">Concepto (opcional)</label>
+          <input class="form-input" type="text" id="inputPayCreditDesc" placeholder="Ej. Pago mensual, saldo total..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelPayCredit">Cancelar</button>
+        <button class="btn btn-transfer" id="btnSavePayCredit" style="color:#fff">💳 Pagar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Nuevo Crédito ========= -->
+  <div class="modal-overlay" id="modalNewCredit">
+    <div class="modal">
+      <div class="modal-header modal-header-credit">
+        <h2 class="modal-title">💳 Nuevo Crédito</h2>
+        <button class="modal-close" id="btnCloseNewCredit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="inputCreditName">Nombre del crédito</label>
+          <input class="form-input" type="text" id="inputCreditName" placeholder="Ej. Visa Oro, Mastercard..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ícono</label>
+          <div class="icon-picker" id="creditIconPicker">
+            <span class="icon-option selected" data-icon="💳">💳</span>
+            <span class="icon-option" data-icon="🏦">🏦</span>
+            <span class="icon-option" data-icon="💵">💵</span>
+            <span class="icon-option" data-icon="💎">💎</span>
+            <span class="icon-option" data-icon="⭐">⭐</span>
+            <span class="icon-option" data-icon="👑">👑</span>
+            <span class="icon-option" data-icon="⚡">⚡</span>
+            <span class="icon-option" data-icon="🔥">🔥</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputCreditLimit">Límite de crédito <span class="form-required" style="color:var(--danger)">*</span></label>
+          <input class="form-input" type="number" id="inputCreditLimit" placeholder="0.00" min="0.01" step="0.01" />
+        </div>
+        <div style="display: flex; gap: 1rem;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" for="inputCreditCutDay">Día de corte</label>
+            <input class="form-input" type="number" id="inputCreditCutDay" placeholder="Ej. 15" min="1" max="31" step="1" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" for="inputCreditPayDay">Día lím. de pago</label>
+            <input class="form-input" type="number" id="inputCreditPayDay" placeholder="Ej. 5" min="1" max="31" step="1" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelNewCredit">Cancelar</button>
+        <button class="btn btn-credit" id="btnSaveNewCredit">Guardar Crédito</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Cargo (crédito) ========= -->
+  <div class="modal-overlay" id="modalCargo">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-expense">
+        <h2 class="modal-title">📅 Registrar Cargo</h2>
+        <button class="modal-close" id="btnCloseCargo">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="cargoCreditName"></p>
+        <div class="form-group">
+          <label class="form-label" for="inputCargoAmount">Monto del cargo</label>
+          <input class="form-input input-expense" type="number" id="inputCargoAmount" placeholder="0.00" min="0.01" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputCargoDesc">Descripción (opcional)</label>
+          <input class="form-input" type="text" id="inputCargoDesc" placeholder="Ej. Restaurante, Amazon..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelCargo">Cancelar</button>
+        <button class="btn btn-expense" id="btnSaveCargo">📅 Cargar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Pago (crédito) ========= -->
+  <div class="modal-overlay" id="modalPago">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-income">
+        <h2 class="modal-title">✅ Registrar Pago</h2>
+        <button class="modal-close" id="btnClosePago">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="pagoCreditName"></p>
+        <div class="form-group">
+          <label class="form-label" for="inputPagoAmount">Monto del pago</label>
+          <input class="form-input input-income" type="number" id="inputPagoAmount" placeholder="0.00" min="0.01" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputPagoDesc">Descripción (opcional)</label>
+          <input class="form-input" type="text" id="inputPagoDesc" placeholder="Ej. Pago mensual..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelPago">Cancelar</button>
+        <button class="btn btn-income" id="btnSavePago">✅ Pagar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Eliminar Crédito ========= -->
+  <div class="modal-overlay" id="modalDeleteCredit">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-danger">
+        <h2 class="modal-title">🗑 Eliminar Crédito</h2>
+        <button class="modal-close" id="btnCloseDeleteCredit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-account-name" id="deleteCreditName"></p>
+        <div class="delete-warning">
+          <p>¿Estás seguro de que deseas eliminar este crédito?</p>
+          <p class="delete-warning-note">Los movimientos <strong>no se borrarán</strong>.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelDeleteCredit">Cancelar</button>
+        <button class="btn btn-danger" id="btnConfirmDeleteCredit">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= TOAST ========= -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
