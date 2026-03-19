@@ -1,69 +1,81 @@
 /* ============================================================
    FinanzApp – app.js
-   Base de datos: localStorage
-     · finanzapp_accounts   → cuentas activas
-     · finanzapp_movements  → historial de movimientos (persiste aunque se elimine la cuenta)
+   Base de datos: Supabase (PostgreSQL)
    ============================================================ */
 
-// ---- DB helpers ----
-const DB_KEY           = 'finanzapp_accounts';
-const DB_KEY_CREDITS   = 'finanzapp_credits';
-const DB_KEY_MOVEMENTS = 'finanzapp_movements';
-const DB_KEY_LABELS    = 'finanzapp_labels';
+const supabaseUrl = 'https://ixizwkzpuwjijtrmztub.supabase.co';
+const supabaseKey = 'sb_publishable_hhHysg3Z4R7WCXzCzw6btg_m9gH2ZCE';
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-function loadAccounts() {
-  try { return JSON.parse(localStorage.getItem(DB_KEY)) || []; }
-  catch { return []; }
-}
-
-function loadCredits() {
-  try { return JSON.parse(localStorage.getItem(DB_KEY_CREDITS)) || []; }
-  catch { return []; }
-}
-
-function saveCredits(credits) {
-  localStorage.setItem(DB_KEY_CREDITS, JSON.stringify(credits));
-}
-
-function saveAccounts(accounts) {
-  localStorage.setItem(DB_KEY, JSON.stringify(accounts));
-}
-
-function loadMovements() {
-  try { return JSON.parse(localStorage.getItem(DB_KEY_MOVEMENTS)) || []; }
-  catch { return []; }
-}
-
-function saveMovements(movements) {
-  localStorage.setItem(DB_KEY_MOVEMENTS, JSON.stringify(movements));
-}
-
-function recordMovement({ accountId, accountName, accountIcon, type, amount, description }) {
-  const movements = loadMovements();
-  movements.push({
-    id: generateId(),
-    accountId,
-    accountName,
-    accountIcon,
-    type,          // 'income' | 'expense'
-    amount,
-    description: description || '',
-    date: new Date().toISOString(),
-  });
-  saveMovements(movements);
-}
+let currentUser = null;
 
 // ---- State ----
-let accounts        = loadAccounts();
-let activeAccountId = null;  // used by income/expense/delete modals
-let selectedIcon    = '🏦';
-let balanceOffset   = 0;     // manual adjustment added to auto-sum
+let accounts = [];
+let activeAccountId = null;
+let selectedIcon = '🏦';
+let balanceOffset = 0;
 let _prevBalanceOffset = 0;
 
-let credits         = loadCredits();
-let activeCreditId  = null;
+let credits = [];
+let activeCreditId = null;
 let selectedCreditIcon = '💳';
-let activeTab       = 'cuentas';
+let activeTab = 'cuentas';
+
+// ---- Auth Logic ----
+async function checkUser() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await fetchData();
+  } else {
+    currentUser = null;
+    window.location.replace('login.html');
+  }
+}
+
+async function logoutUser() {
+  await supabaseClient.auth.signOut();
+  window.location.replace('login.html');
+}
+
+// ---- Data Fetching ----
+async function fetchData() {
+  if (!currentUser) return;
+  const [resAcc, resCred] = await Promise.all([
+    supabaseClient.from('accounts').select('*').order('created_at', { ascending: true }),
+    supabaseClient.from('credits').select('*').order('created_at', { ascending: true })
+  ]);
+  if (resAcc.data) {
+    accounts = resAcc.data.map(a => ({
+      id: a.id, name: a.name, icon: a.icon, balance: a.balance, createdAt: a.created_at
+    }));
+  }
+  if (resCred.data) {
+    credits = resCred.data.map(c => ({
+      id: c.id, name: c.name, icon: c.icon, limit: c.limit_amount, balance: c.balance, 
+      cutDay: c.cut_day, payDay: c.pay_day, createdAt: c.created_at
+    }));
+  }
+  render();
+  renderCredits();
+}
+
+async function recordMovement({ accountId, accountName, accountIcon, type, amount, description }) {
+  if(!currentUser) return;
+  await supabaseClient.from('movements').insert({
+    user_id: currentUser.id,
+    account_id: accountId,
+    account_name: accountName,
+    account_icon: accountIcon,
+    type: type,
+    amount: amount,
+    description: description || ''
+  });
+}
+
+// ---- DB Key for Local Settings ----
+const DB_KEY_LABELS = 'finanzapp_labels';
+
 
 // ---- Navigation ----
 function switchTab(tabId) {
@@ -149,7 +161,7 @@ function render() {
             <span class="btn-icon">↓</span> Gasto
           </button>
           <button class="btn btn-transfer" onclick="openTransferModal('${acc.id}')">
-            <span class="btn-icon">⇄</span>
+            <span class="btn-icon">⇄</span> Transferencia
           </button>
         </div>
       </div>
@@ -248,7 +260,8 @@ function closeNewAccountModal() {
   document.getElementById('modalNewAccount').classList.remove('open');
 }
 
-function saveNewAccount() {
+async function saveNewAccount() {
+  if (!currentUser) return;
   const name = document.getElementById('inputAccountName').value.trim();
   const initialStr = document.getElementById('inputInitialBalance').value;
   const initial = initialStr === '' ? 0 : parseFloat(initialStr);
@@ -257,15 +270,16 @@ function saveNewAccount() {
   if (isNaN(initial) || initial < 0) { showToast('⚠️ Monto inválido', 'error'); return; }
 
   const newAccount = {
-    id: generateId(),
+    user_id: currentUser.id,
     name,
     icon: selectedIcon,
-    balance: initial,
-    createdAt: new Date().toISOString(),
+    balance: initial
   };
 
-  accounts.push(newAccount);
-  saveAccounts(accounts);
+  const { data, error } = await supabaseClient.from('accounts').insert(newAccount).select();
+  if (error) { showToast('⚠️ Error al crear cuenta', 'error'); return; }
+  
+  accounts.push(data[0]);
   closeNewAccountModal();
   render();
   showToast(`✅ Cuenta "${name}" creada`);
@@ -287,15 +301,21 @@ function closeIncomeModal() {
   activeAccountId = null;
 }
 
-function saveIncome() {
+async function saveIncome() {
   const amount = parseFloat(document.getElementById('inputIncomeAmount').value);
   const desc   = document.getElementById('inputIncomeDesc').value.trim();
   if (isNaN(amount) || amount <= 0) { showToast('⚠️ Ingresa un monto válido', 'error'); return; }
 
   const idx = accounts.findIndex(a => a.id === activeAccountId);
-  accounts[idx].balance += amount;
-  saveAccounts(accounts);
-  recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'income', amount, description: desc });
+  if (idx === -1) return;
+  
+  const newBalance = accounts[idx].balance + amount;
+  const { error } = await supabaseClient.from('accounts').update({ balance: newBalance }).eq('id', accounts[idx].id);
+  if (error) { showToast('⚠️ Error al actualizar', 'error'); return; }
+
+  accounts[idx].balance = newBalance;
+  await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'income', amount, description: desc });
+  
   closeIncomeModal();
   render();
   showToast(`↑ +${formatCurrency(amount)} agregado`, 'income');
@@ -317,15 +337,21 @@ function closeExpenseModal() {
   activeAccountId = null;
 }
 
-function saveExpense() {
+async function saveExpense() {
   const amount = parseFloat(document.getElementById('inputExpenseAmount').value);
   const desc   = document.getElementById('inputExpenseDesc').value.trim();
   if (isNaN(amount) || amount <= 0) { showToast('⚠️ Ingresa un monto válido', 'error'); return; }
 
   const idx = accounts.findIndex(a => a.id === activeAccountId);
-  accounts[idx].balance -= amount;
-  saveAccounts(accounts);
-  recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'expense', amount, description: desc });
+  if (idx === -1) return;
+  
+  const newBalance = accounts[idx].balance - amount;
+  const { error } = await supabaseClient.from('accounts').update({ balance: newBalance }).eq('id', accounts[idx].id);
+  if (error) { showToast('⚠️ Error al actualizar', 'error'); return; }
+
+  accounts[idx].balance = newBalance;
+  await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'expense', amount, description: desc });
+  
   closeExpenseModal();
   render();
   showToast(`↓ -${formatCurrency(amount)} restado`, 'expense');
@@ -403,13 +429,16 @@ function closeDeleteModal() {
   activeAccountId = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   const acc = accounts.find(a => a.id === activeAccountId);
   if (!acc) return;
   const name = acc.name;
+  
+  const { error } = await supabaseClient.from('accounts').delete().eq('id', activeAccountId);
+  if (error) { showToast('⚠️ Error al eliminar', 'error'); return; }
+
   accounts = accounts.filter(a => a.id !== activeAccountId);
-  // Movements are kept intentionally — only account record is removed
-  saveAccounts(accounts);
+  // Movements are kept intentionally in the DB, as they don't CASCADE delete by default unless specified
   closeDeleteModal();
   render();
   showToast(`🗑 Cuenta "${name}" eliminada`);
@@ -433,7 +462,8 @@ function closeNewCreditModal() {
   document.getElementById('modalNewCredit').classList.remove('open');
 }
 
-function saveNewCredit() {
+async function saveNewCredit() {
+  if (!currentUser) return;
   const name = document.getElementById('inputCreditName').value.trim();
   const limitStr = document.getElementById('inputCreditLimit').value;
   const cutStr = document.getElementById('inputCreditCutDay').value;
@@ -449,18 +479,24 @@ function saveNewCredit() {
   if (isNaN(payDay) || payDay < 1 || payDay > 31) { showToast('⚠️ Día límite inválido (1-31)', 'error'); return; }
 
   const newCredit = {
-    id: generateId(),
+    user_id: currentUser.id,
     name,
     icon: selectedCreditIcon,
-    limit,
+    limit_amount: limit,
     balance: 0, // balance here means debt
-    cutDay,
-    payDay,
-    createdAt: new Date().toISOString()
+    cut_day: cutDay,
+    pay_day: payDay
   };
 
-  credits.push(newCredit);
-  saveCredits(credits);
+  const { data, error } = await supabaseClient.from('credits').insert(newCredit).select();
+  if (error) { showToast('⚠️ Error al crear crédito', 'error'); return; }
+
+  // Supabase returns the matched row, push to local state but adapt camelCase for UI
+  const c = data[0];
+  credits.push({
+    id: c.id, name: c.name, icon: c.icon, limit: c.limit_amount, balance: c.balance, cutDay: c.cut_day, payDay: c.pay_day, createdAt: c.created_at
+  });
+  
   closeNewCreditModal();
   renderCredits();
   showToast(`💳 Crédito "${name}" creado`);
@@ -482,16 +518,21 @@ function closeCargoModal() {
   activeCreditId = null;
 }
 
-function saveCargo() {
+async function saveCargo() {
   const amount = parseFloat(document.getElementById('inputCargoAmount').value);
   const desc   = document.getElementById('inputCargoDesc').value.trim();
   if (isNaN(amount) || amount <= 0) { showToast('⚠️ Ingresa un monto válido', 'error'); return; }
 
   const idx = credits.findIndex(i => i.id === activeCreditId);
-  // Cargo increases the debt (balance)
-  credits[idx].balance += amount;
-  saveCredits(credits);
-  recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'cargo', amount, description: desc });
+  if (idx === -1) return;
+  const newBalance = credits[idx].balance + amount;
+
+  const { error } = await supabaseClient.from('credits').update({ balance: newBalance }).eq('id', credits[idx].id);
+  if (error) { showToast('⚠️ Error al registrar cargo', 'error'); return; }
+
+  credits[idx].balance = newBalance;
+  await recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'cargo', amount, description: desc });
+  
   closeCargoModal();
   renderCredits();
   showToast(`📅 Cargo de ${formatCurrency(amount)} registrado`, 'expense');
@@ -513,17 +554,23 @@ function closePagoModal() {
   activeCreditId = null;
 }
 
-function savePago() {
+async function savePago() {
   const amount = parseFloat(document.getElementById('inputPagoAmount').value);
   const desc   = document.getElementById('inputPagoDesc').value.trim();
   if (isNaN(amount) || amount <= 0) { showToast('⚠️ Ingresa un monto válido', 'error'); return; }
 
   const idx = credits.findIndex(i => i.id === activeCreditId);
-  // Pago decreases the debt (balance)
-  credits[idx].balance -= amount;
-  if (credits[idx].balance < 0) credits[idx].balance = 0; // cannot owe negative
-  saveCredits(credits);
-  recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'pago', amount, description: desc });
+  if (idx === -1) return;
+  
+  let newBalance = credits[idx].balance - amount;
+  if (newBalance < 0) newBalance = 0; // cannot owe negative
+
+  const { error } = await supabaseClient.from('credits').update({ balance: newBalance }).eq('id', credits[idx].id);
+  if (error) { showToast('⚠️ Error al registrar pago', 'error'); return; }
+
+  credits[idx].balance = newBalance;
+  await recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'pago', amount, description: desc });
+  
   closePagoModal();
   renderCredits();
   showToast(`✅ Pago de ${formatCurrency(amount)} registrado`, 'income');
@@ -542,12 +589,15 @@ function closeDeleteCreditModal() {
   activeCreditId = null;
 }
 
-function confirmDeleteCredit() {
+async function confirmDeleteCredit() {
   const c = credits.find(i => i.id === activeCreditId);
   if (!c) return;
   const name = c.name;
+
+  const { error } = await supabaseClient.from('credits').delete().eq('id', activeCreditId);
+  if (error) { showToast('⚠️ Error al eliminar', 'error'); return; }
+
   credits = credits.filter(i => i.id !== activeCreditId);
-  saveCredits(credits);
   closeDeleteCreditModal();
   renderCredits();
   showToast(`🗑 Crédito "${name}" eliminado`);
@@ -594,7 +644,7 @@ function closeTransferModal() {
   activeAccountId = null;
 }
 
-function saveTransfer() {
+async function saveTransfer() {
   const amount = parseFloat(document.getElementById('inputTransferAmount').value);
   const desc   = document.getElementById('inputTransferDesc').value.trim() || 'Transferencia';
   const destVal = document.getElementById('selectTransferDest').value;
@@ -605,25 +655,28 @@ function saveTransfer() {
   const destType = destVal.startsWith('acc_') ? 'account' : 'credit';
   const destId = destVal.substring(4);
   
-  // Origin update
   const originIdx = accounts.findIndex(a => a.id === activeAccountId);
   if (originIdx === -1) return;
   const origin = accounts[originIdx];
   
-  // Determine if it's an account or credit destination
   if (destType === 'account') {
     const destIdx = accounts.findIndex(a => a.id === destId);
     if (destIdx === -1) return;
     const dest = accounts[destIdx];
     
-    // Process
-    origin.balance -= amount;
-    dest.balance += amount;
-    saveAccounts(accounts);
+    // DB Updates
+    const originBal = origin.balance - amount;
+    const destBal = dest.balance + amount;
+    const { error: err1 } = await supabaseClient.from('accounts').update({ balance: originBal }).eq('id', origin.id);
+    const { error: err2 } = await supabaseClient.from('accounts').update({ balance: destBal }).eq('id', dest.id);
     
-    // Movements
-    recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `${desc} (hacia ${dest.name})` });
-    recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'income', amount, description: `${desc} (desde ${origin.name})` });
+    if (err1 || err2) { showToast('⚠️ Error al transferir', 'error'); return; }
+
+    origin.balance = originBal;
+    dest.balance = destBal;
+    
+    await recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `${desc} (hacia ${dest.name})` });
+    await recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'income', amount, description: `${desc} (desde ${origin.name})` });
     
     showToast(`⇄ ${formatCurrency(amount)} transferidos a ${dest.name}`);
   } else {
@@ -632,17 +685,20 @@ function saveTransfer() {
     if (destIdx === -1) return;
     const dest = credits[destIdx];
     
-    // Process
-    origin.balance -= amount;
-    dest.balance -= amount; // paying debt
-    if (dest.balance < 0) dest.balance = 0; // handle overpayment normally, but just cap at 0 for simplicity
+    const originBal = origin.balance - amount;
+    let destBal = dest.balance - amount;
+    if (destBal < 0) destBal = 0;
+
+    const { error: err1 } = await supabaseClient.from('accounts').update({ balance: originBal }).eq('id', origin.id);
+    const { error: err2 } = await supabaseClient.from('credits').update({ balance: destBal }).eq('id', dest.id);
     
-    saveAccounts(accounts);
-    saveCredits(credits);
+    if (err1 || err2) { showToast('⚠️ Error al abonar crédito', 'error'); return; }
+
+    origin.balance = originBal;
+    dest.balance = destBal;
     
-    // Movements
-    recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `Pago de crédito (${dest.name})` });
-    recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'pago', amount, description: `Abono desde cuenta ${origin.name}` });
+    await recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `Pago de crédito (${dest.name})` });
+    await recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'pago', amount, description: `Abono desde cuenta ${origin.name}` });
     
     showToast(`✅ ${formatCurrency(amount)} abonados a ${dest.name}`);
   }
@@ -678,7 +734,7 @@ function closePayCreditModal() {
   activeCreditId = null;
 }
 
-function savePayCredit() {
+async function savePayCredit() {
   const amount = parseFloat(document.getElementById('inputPayCreditAmount').value);
   const desc   = document.getElementById('inputPayCreditDesc').value.trim() || 'Pago de tarjeta';
   const originId = document.getElementById('selectPayCreditOrigin').value;
@@ -695,16 +751,20 @@ function savePayCredit() {
   const origin = accounts[originIdx];
   
   // Process payment
-  origin.balance -= amount;
-  dest.balance -= amount; // paying debt
-  if (dest.balance < 0) dest.balance = 0; // cap debt at 0
+  const originBal = origin.balance - amount;
+  let destBal = dest.balance - amount;
+  if (destBal < 0) destBal = 0;
+
+  const { error: err1 } = await supabaseClient.from('accounts').update({ balance: originBal }).eq('id', origin.id);
+  const { error: err2 } = await supabaseClient.from('credits').update({ balance: destBal }).eq('id', dest.id);
   
-  saveAccounts(accounts);
-  saveCredits(credits);
+  if (err1 || err2) { showToast('⚠️ Error al registrar pago', 'error'); return; }
+
+  origin.balance = originBal;
+  dest.balance = destBal;
   
-  // Movements
-  recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `${desc} (${dest.name})` });
-  recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'pago', amount, description: `Abono desde cuenta ${origin.name}` });
+  await recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `${desc} (${dest.name})` });
+  await recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'pago', amount, description: `Abono desde cuenta ${origin.name}` });
   
   closePayCreditModal();
   render();
@@ -807,8 +867,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inputPagoAmount').addEventListener('keydown', e => { if (e.key === 'Enter') savePago(); });
   document.getElementById('inputPayCreditAmount').addEventListener('keydown', e => { if (e.key === 'Enter') savePayCredit(); });
   
-  // Initial render
-  render();
-  renderCredits();
+  // Auth event listeners
+  document.getElementById('btnLogout').addEventListener('click', logoutUser);
+  
+  // Initial auth check -> starts data fetching if logged in
+  checkUser();
   applyStoredOffset();
 });

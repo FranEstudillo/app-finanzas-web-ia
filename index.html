@@ -8,10 +8,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
+
 
   <!-- ========= HEADER ========= -->
   <header class="header">
@@ -22,7 +27,9 @@
       </div>
       <nav class="nav">
         <a class="nav-link active" href="#" id="tabCuentas" onclick="switchTab('cuentas')">Cuentas</a>
-        <a class="nav-link"        href="#" id="tabCreditos" onclick="switchTab('creditos')">Créditos</a>
+        <a class="nav-link" href="#" id="tabCreditos" onclick="switchTab('creditos')">Créditos</a>
+        <a class="nav-link" href="#" id="btnLogout"
+          style="color: var(--danger); font-size: 0.85rem; margin-left: 1rem;">Cerrar sesión</a>
       </nav>
     </div>
   </header>
@@ -47,9 +54,11 @@
         <p class="summary-label">Balance General</p>
         <div class="summary-value-row">
           <span class="summary-value" id="totalBalance">$0.00</span>
-          <button class="btn-edit-label" id="btnEditBalance" title="Ajustar monto" onclick="startEditBalance()">✏️</button>
-          <input class="summary-balance-input" id="inputBalanceAmount" type="number" step="0.01"
-            style="display:none" onblur="saveBalance()" onkeydown="if(event.key==='Enter')saveBalance();if(event.key==='Escape')cancelBalance()" />
+          <button class="btn-edit-label" id="btnEditBalance" title="Ajustar monto"
+            onclick="startEditBalance()">✏️</button>
+          <input class="summary-balance-input" id="inputBalanceAmount" type="number" step="0.01" style="display:none"
+            onblur="saveBalance()"
+            onkeydown="if(event.key==='Enter')saveBalance();if(event.key==='Escape')cancelBalance()" />
         </div>
       </div>
       <div class="summary-card">
@@ -240,7 +249,8 @@
         <p class="modal-account-name" id="transferOriginName"></p>
         <div class="form-group">
           <label class="form-label" for="inputTransferAmount">Monto a transferir</label>
-          <input class="form-input" type="number" id="inputTransferAmount" placeholder="0.00" min="0.01" step="0.01" style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
+          <input class="form-input" type="number" id="inputTransferAmount" placeholder="0.00" min="0.01" step="0.01"
+            style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
         </div>
         <div class="form-group">
           <label class="form-label" for="selectTransferDest">Cuenta o Crédito destino</label>
@@ -277,11 +287,13 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="inputPayCreditAmount">Monto a pagar</label>
-          <input class="form-input" type="number" id="inputPayCreditAmount" placeholder="0.00" min="0.01" step="0.01" style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
+          <input class="form-input" type="number" id="inputPayCreditAmount" placeholder="0.00" min="0.01" step="0.01"
+            style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
         </div>
         <div class="form-group">
           <label class="form-label" for="inputPayCreditDesc">Concepto (opcional)</label>
-          <input class="form-input" type="text" id="inputPayCreditDesc" placeholder="Ej. Pago mensual, saldo total..." />
+          <input class="form-input" type="text" id="inputPayCreditDesc"
+            placeholder="Ej. Pago mensual, saldo total..." />
         </div>
       </div>
       <div class="modal-footer">
@@ -317,17 +329,20 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputCreditLimit">Límite de crédito <span class="form-required" style="color:var(--danger)">*</span></label>
+          <label class="form-label" for="inputCreditLimit">Límite de crédito <span class="form-required"
+              style="color:var(--danger)">*</span></label>
           <input class="form-input" type="number" id="inputCreditLimit" placeholder="0.00" min="0.01" step="0.01" />
         </div>
         <div style="display: flex; gap: 1rem;">
           <div class="form-group" style="flex:1;">
             <label class="form-label" for="inputCreditCutDay">Día de corte</label>
-            <input class="form-input" type="number" id="inputCreditCutDay" placeholder="Ej. 15" min="1" max="31" step="1" />
+            <input class="form-input" type="number" id="inputCreditCutDay" placeholder="Ej. 15" min="1" max="31"
+              step="1" />
           </div>
           <div class="form-group" style="flex:1;">
             <label class="form-label" for="inputCreditPayDay">Día lím. de pago</label>
-            <input class="form-input" type="number" id="inputCreditPayDay" placeholder="Ej. 5" min="1" max="31" step="1" />
+            <input class="form-input" type="number" id="inputCreditPayDay" placeholder="Ej. 5" min="1" max="31"
+              step="1" />
           </div>
         </div>
       </div>
@@ -349,7 +364,8 @@
         <p class="modal-account-name" id="cargoCreditName"></p>
         <div class="form-group">
           <label class="form-label" for="inputCargoAmount">Monto del cargo</label>
-          <input class="form-input input-expense" type="number" id="inputCargoAmount" placeholder="0.00" min="0.01" step="0.01" />
+          <input class="form-input input-expense" type="number" id="inputCargoAmount" placeholder="0.00" min="0.01"
+            step="0.01" />
         </div>
         <div class="form-group">
           <label class="form-label" for="inputCargoDesc">Descripción (opcional)</label>
@@ -374,7 +390,8 @@
         <p class="modal-account-name" id="pagoCreditName"></p>
         <div class="form-group">
           <label class="form-label" for="inputPagoAmount">Monto del pago</label>
-          <input class="form-input input-income" type="number" id="inputPagoAmount" placeholder="0.00" min="0.01" step="0.01" />
+          <input class="form-input input-income" type="number" id="inputPagoAmount" placeholder="0.00" min="0.01"
+            step="0.01" />
         </div>
         <div class="form-group">
           <label class="form-label" for="inputPagoDesc">Descripción (opcional)</label>
@@ -413,6 +430,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="app.js"></script>
+  <!-- <script src="login.js"></script> -->
 </body>
 
 </html>
