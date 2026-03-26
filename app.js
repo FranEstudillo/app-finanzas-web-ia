@@ -21,6 +21,25 @@ let activeCreditId = null;
 let selectedCreditIcon = '💳';
 let activeTab = 'cuentas';
 
+// ---- Expense Categories ----
+const EXPENSE_CATEGORIES = [
+  // { emoji: '💹', label: 'Ganancia' },
+  { emoji: '🍔', label: 'Comida' },
+  { emoji: '🏠', label: 'Hogar' },
+  { emoji: '⛽', label: 'Gasolina' },
+  { emoji: '💊', label: 'Salud' },
+  { emoji: '🎉', label: 'Entrete.' },
+  { emoji: '👕', label: 'Ropa' },
+  { emoji: '💡', label: 'Servicios' },
+  { emoji: '✈️', label: 'Viajes' },
+  { emoji: '💼', label: 'Trabajo' },
+  { emoji: '🛒', label: 'Super' },
+  { emoji: '❓', label: 'Otro' }
+  // { emoji: '📚', label: 'Educación' },
+];
+let selectedExpenseCategory = '';
+let selectedCargoCategory = '';
+
 // ---- Auth Logic ----
 async function checkUser() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -60,7 +79,7 @@ async function fetchData() {
   renderCredits();
 }
 
-async function recordMovement({ accountId, accountName, accountIcon, type, amount, description }) {
+async function recordMovement({ accountId, accountName, accountIcon, type, amount, description, category }) {
   if(!currentUser) return;
   await supabaseClient.from('movements').insert({
     user_id: currentUser.id,
@@ -69,8 +88,41 @@ async function recordMovement({ accountId, accountName, accountIcon, type, amoun
     account_icon: accountIcon,
     type: type,
     amount: amount,
-    description: description || ''
+    description: description || '',
+    category: category || ''
   });
+}
+
+// ---- Category Picker Helper ----
+function renderCategoryPicker(containerId, currentSelected, onSelect) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = EXPENSE_CATEGORIES.map(cat => {
+    const isSelected = currentSelected === cat.label;
+    return `<button type="button" class="cat-chip${isSelected ? ' selected' : ''}" data-label="${cat.label}">
+      <span class="cat-emoji">${cat.emoji}</span>${cat.label}
+    </button>`;
+  }).join('');
+  container.addEventListener('click', e => {
+    const chip = e.target.closest('.cat-chip');
+    if (!chip) return;
+    const label = chip.dataset.label;
+    onSelect(label);
+    container.querySelectorAll('.cat-chip').forEach(c =>
+      c.classList.toggle('selected', c.dataset.label === label)
+    );
+  }, { once: true });
+  // re-attach for subsequent clicks (use event delegation properly)
+  container._onSelect = onSelect;
+  container.onclick = e => {
+    const chip = e.target.closest('.cat-chip');
+    if (!chip) return;
+    const label = chip.dataset.label;
+    container._onSelect(label);
+    container.querySelectorAll('.cat-chip').forEach(c =>
+      c.classList.toggle('selected', c.dataset.label === label)
+    );
+  };
 }
 
 // ---- DB Key for Local Settings ----
@@ -328,6 +380,8 @@ function openExpenseModal(accountId) {
   document.getElementById('expenseAccountName').textContent = `${acc.icon}  ${acc.name}`;
   document.getElementById('inputExpenseAmount').value = '';
   document.getElementById('inputExpenseDesc').value = '';
+  selectedExpenseCategory = '';
+  renderCategoryPicker('expenseCategoryPicker', '', label => { selectedExpenseCategory = label; });
   document.getElementById('modalExpense').classList.add('open');
   setTimeout(() => document.getElementById('inputExpenseAmount').focus(), 150);
 }
@@ -350,7 +404,7 @@ async function saveExpense() {
   if (error) { showToast('⚠️ Error al actualizar', 'error'); return; }
 
   accounts[idx].balance = newBalance;
-  await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'expense', amount, description: desc });
+  await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'expense', amount, description: desc, category: selectedExpenseCategory });
   
   closeExpenseModal();
   render();
@@ -509,6 +563,8 @@ function openCargoModal(creditId) {
   document.getElementById('cargoCreditName').textContent = `${c.icon}  ${c.name}`;
   document.getElementById('inputCargoAmount').value = '';
   document.getElementById('inputCargoDesc').value = '';
+  selectedCargoCategory = '';
+  renderCategoryPicker('cargoCategoryPicker', '', label => { selectedCargoCategory = label; });
   document.getElementById('modalCargo').classList.add('open');
   setTimeout(() => document.getElementById('inputCargoAmount').focus(), 150);
 }
@@ -531,7 +587,7 @@ async function saveCargo() {
   if (error) { showToast('⚠️ Error al registrar cargo', 'error'); return; }
 
   credits[idx].balance = newBalance;
-  await recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'cargo', amount, description: desc });
+  await recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'cargo', amount, description: desc, category: selectedCargoCategory });
   
   closeCargoModal();
   renderCredits();

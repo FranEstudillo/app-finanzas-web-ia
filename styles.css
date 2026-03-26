@@ -335,6 +335,42 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; }
 .icon-option:hover { border-color: var(--accent); }
 .icon-option.selected { border-color: var(--accent); background: var(--accent-glow); }
 
+/* ---- Category Picker ---- */
+.category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .35rem .75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: .8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  line-height: 1;
+}
+.cat-chip:hover {
+  border-color: var(--expense);
+  color: var(--expense);
+  background: var(--expense-bg);
+}
+.cat-chip.selected {
+  border-color: var(--expense);
+  background: var(--expense-bg);
+  color: var(--expense);
+  box-shadow: 0 0 0 2px rgba(255,92,124,.18);
+}
+.cat-chip .cat-emoji { font-size: .95rem; }
+
 /* ========= TOAST ========= */
 .toast {
   position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
