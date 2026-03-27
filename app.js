@@ -184,18 +184,17 @@ function render() {
   }
   emptyState.style.display = 'none';
 
-  // Cards
+  // Cards (simplified – click opens detail)
   grid.innerHTML = accounts.map(acc => {
     const balanceClass = acc.balance > 0 ? 'positive' : acc.balance < 0 ? 'negative' : '';
     return `
-      <div class="account-card" id="card-${acc.id}">
+      <div class="account-card" id="card-${acc.id}" onclick="openAccountDetail('${acc.id}')">
         <div class="card-header">
           <span class="card-icon">${acc.icon}</span>
           <div style="flex:1">
             <p class="card-title">${escapeHtml(acc.name)}</p>
             <p class="card-subtitle">Creada ${formatDate(acc.createdAt)}</p>
           </div>
-          <button class="btn-delete-card" onclick="openDeleteModal('${acc.id}')" title="Eliminar cuenta">🗑</button>
         </div>
 
         <div class="card-balance">
@@ -203,18 +202,6 @@ function render() {
           <p class="balance-amount ${balanceClass}" id="balance-${acc.id}">
             ${formatCurrency(acc.balance)}
           </p>
-        </div>
-
-        <div class="card-actions">
-          <button class="btn btn-income" onclick="openIncomeModal('${acc.id}')">
-            <span class="btn-icon">↑</span> Ingreso
-          </button>
-          <button class="btn btn-expense" onclick="openExpenseModal('${acc.id}')">
-            <span class="btn-icon">↓</span> Gasto
-          </button>
-          <button class="btn btn-transfer" onclick="openTransferModal('${acc.id}')">
-            <span class="btn-icon">⇄</span> Transferencia
-          </button>
         </div>
       </div>
     `;
@@ -244,21 +231,19 @@ function renderCredits() {
   }
   emptyState.style.display = 'none';
 
-  // Cards
+  // Cards (simplified – click opens detail)
   grid.innerHTML = credits.map(c => {
     const available = c.limit - c.balance;
-    // Debt > 0 is negative (red). Debt == 0 is positive (green)
     const debtClass = c.balance > 0 ? 'negative' : 'positive';
 
     return `
-      <div class="account-card" id="card-${c.id}" style="border-top-color: var(--credit)">
+      <div class="account-card" id="card-${c.id}" style="border-top-color: var(--credit)" onclick="openCreditDetail('${c.id}')">
         <div class="card-header">
           <span class="card-icon">${c.icon}</span>
           <div style="flex:1">
             <p class="card-title">${escapeHtml(c.name)}</p>
             <p class="card-subtitle">Corte: ${c.cutDay} | Pago: ${c.payDay}</p>
           </div>
-          <button class="btn-delete-card" onclick="openDeleteCreditModal('${c.id}')" title="Eliminar crédito">🗑</button>
         </div>
 
         <div class="card-balance">
@@ -267,18 +252,6 @@ function renderCredits() {
             ${formatCurrency(c.balance)} <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal">/ ${formatCurrency(c.limit)}</span>
           </p>
           <p class="balance-label" style="margin-top: 0.2rem; color: var(--income)">Disponible: ${formatCurrency(available)}</p>
-        </div>
-
-        <div class="card-actions">
-          <button class="btn btn-expense" onclick="openCargoModal('${c.id}')">
-            <span class="btn-icon">📅</span> Cargo
-          </button>
-          <button class="btn btn-income" onclick="openPagoModal('${c.id}')">
-            <span class="btn-icon">✅</span> Abono
-          </button>
-          <button class="btn btn-transfer" onclick="openPayCreditModal('${c.id}')">
-            <span class="btn-icon">💳</span> Pagar
-          </button>
         </div>
       </div>
     `;
@@ -294,6 +267,102 @@ function escapeHtml(str) {
 function formatDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ---- ACCOUNT DETAIL MODAL ----
+function openAccountDetail(accountId) {
+  activeAccountId = accountId;
+  const acc = accounts.find(a => a.id === accountId);
+  if (!acc) return;
+
+  document.getElementById('accountDetailTitle').textContent = acc.name;
+  document.getElementById('accountDetailIcon').textContent = acc.icon;
+  document.getElementById('accountDetailName').textContent = acc.name;
+  document.getElementById('accountDetailSub').textContent = `Creada ${formatDate(acc.createdAt)}`;
+
+  const balEl = document.getElementById('accountDetailBalance');
+  balEl.textContent = formatCurrency(acc.balance);
+  balEl.className = 'detail-balance-amount' + (acc.balance > 0 ? ' positive' : acc.balance < 0 ? ' negative' : '');
+
+  // Wire action buttons (replace to avoid duplicate listeners)
+  const btnIncome   = document.getElementById('btnDetailIncome');
+  const btnExpense  = document.getElementById('btnDetailExpense');
+  const btnTransfer = document.getElementById('btnDetailTransfer');
+  const btnDelete   = document.getElementById('btnDetailDeleteAccount');
+
+  btnIncome.onclick   = () => openIncomeModal(accountId);
+  btnExpense.onclick  = () => openExpenseModal(accountId);
+  btnTransfer.onclick = () => openTransferModal(accountId);
+  btnDelete.onclick   = () => openDeleteModal(accountId);
+
+  document.getElementById('modalAccountDetail').classList.add('open');
+}
+
+function closeAccountDetail() {
+  document.getElementById('modalAccountDetail').classList.remove('open');
+  activeAccountId = null;
+}
+
+// Refresh the account detail panel (balance) after an operation
+function refreshAccountDetail() {
+  if (!activeAccountId) return;
+  const acc = accounts.find(a => a.id === activeAccountId);
+  if (!acc) { closeAccountDetail(); return; }
+  const balEl = document.getElementById('accountDetailBalance');
+  balEl.textContent = formatCurrency(acc.balance);
+  balEl.className = 'detail-balance-amount' + (acc.balance > 0 ? ' positive' : acc.balance < 0 ? ' negative' : '');
+}
+
+// ---- CREDIT DETAIL MODAL ----
+function openCreditDetail(creditId) {
+  activeCreditId = creditId;
+  const c = credits.find(i => i.id === creditId);
+  if (!c) return;
+
+  const available = c.limit - c.balance;
+  const debtClass = c.balance > 0 ? ' negative' : ' positive';
+
+  document.getElementById('creditDetailTitle').textContent = c.name;
+  document.getElementById('creditDetailIcon').textContent = c.icon;
+  document.getElementById('creditDetailName').textContent = c.name;
+  document.getElementById('creditDetailSub').textContent = `Corte: día ${c.cutDay}  |  Pago: día ${c.payDay}`;
+
+  const balEl = document.getElementById('creditDetailBalance');
+  balEl.textContent = `${formatCurrency(c.balance)} / ${formatCurrency(c.limit)}`;
+  balEl.className = 'detail-balance-amount' + debtClass;
+
+  document.getElementById('creditDetailAvailable').textContent = formatCurrency(available);
+  document.getElementById('creditDetailCutDay').textContent = `Día ${c.cutDay}`;
+  document.getElementById('creditDetailPayDay').textContent = `Día ${c.payDay}`;
+
+  const btnCargo  = document.getElementById('btnDetailCargo');
+  const btnAbono  = document.getElementById('btnDetailAbono');
+  const btnPagar  = document.getElementById('btnDetailPagar');
+  const btnDelete = document.getElementById('btnDetailDeleteCredit');
+
+  btnCargo.onclick  = () => openCargoModal(creditId);
+  btnAbono.onclick  = () => openPagoModal(creditId);
+  btnPagar.onclick  = () => openPayCreditModal(creditId);
+  btnDelete.onclick = () => openDeleteCreditModal(creditId);
+
+  document.getElementById('modalCreditDetail').classList.add('open');
+}
+
+function closeCreditDetail() {
+  document.getElementById('modalCreditDetail').classList.remove('open');
+  activeCreditId = null;
+}
+
+function refreshCreditDetail() {
+  if (!activeCreditId) return;
+  const c = credits.find(i => i.id === activeCreditId);
+  if (!c) { closeCreditDetail(); return; }
+  const available = c.limit - c.balance;
+  const debtClass = c.balance > 0 ? ' negative' : ' positive';
+  const balEl = document.getElementById('creditDetailBalance');
+  balEl.textContent = `${formatCurrency(c.balance)} / ${formatCurrency(c.limit)}`;
+  balEl.className = 'detail-balance-amount' + debtClass;
+  document.getElementById('creditDetailAvailable').textContent = formatCurrency(available);
 }
 
 // ---- NEW ACCOUNT MODAL ----
@@ -370,6 +439,7 @@ async function saveIncome() {
   
   closeIncomeModal();
   render();
+  refreshAccountDetail();
   showToast(`↑ +${formatCurrency(amount)} agregado`, 'income');
 }
 
@@ -408,6 +478,7 @@ async function saveExpense() {
   
   closeExpenseModal();
   render();
+  refreshAccountDetail();
   showToast(`↓ -${formatCurrency(amount)} restado`, 'expense');
 }
 
@@ -492,8 +563,8 @@ async function confirmDelete() {
   if (error) { showToast('⚠️ Error al eliminar', 'error'); return; }
 
   accounts = accounts.filter(a => a.id !== activeAccountId);
-  // Movements are kept intentionally in the DB, as they don't CASCADE delete by default unless specified
   closeDeleteModal();
+  closeAccountDetail();
   render();
   showToast(`🗑 Cuenta "${name}" eliminada`);
 }
@@ -591,6 +662,7 @@ async function saveCargo() {
   
   closeCargoModal();
   renderCredits();
+  refreshCreditDetail();
   showToast(`📅 Cargo de ${formatCurrency(amount)} registrado`, 'expense');
 }
 
@@ -629,6 +701,7 @@ async function savePago() {
   
   closePagoModal();
   renderCredits();
+  refreshCreditDetail();
   showToast(`✅ Pago de ${formatCurrency(amount)} registrado`, 'income');
 }
 
@@ -655,6 +728,7 @@ async function confirmDeleteCredit() {
 
   credits = credits.filter(i => i.id !== activeCreditId);
   closeDeleteCreditModal();
+  closeCreditDetail();
   renderCredits();
   showToast(`🗑 Crédito "${name}" eliminado`);
 }
@@ -873,13 +947,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnCancelDeleteCredit').addEventListener('click', closeDeleteCreditModal);
   document.getElementById('btnConfirmDeleteCredit').addEventListener('click', confirmDeleteCredit);
 
+  // Detail modals – close buttons
+  document.getElementById('btnCloseAccountDetail').addEventListener('click', closeAccountDetail);
+  document.getElementById('btnCloseCreditDetail').addEventListener('click', closeCreditDetail);
+
   // Close modals clicking outside
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
       if (e.target === overlay) {
         overlay.classList.remove('open');
-        activeAccountId = null;
-        activeCreditId = null;
+        // Only null out ids if it's not the detail modal (so sub-modals can still reference them)
+        if (overlay.id !== 'modalAccountDetail' && overlay.id !== 'modalCreditDetail') {
+          activeAccountId = null;
+          activeCreditId = null;
+        }
       }
     });
   });
