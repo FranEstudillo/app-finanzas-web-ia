@@ -126,6 +126,126 @@
 
   </main>
 
+  <!-- ========= MODAL: Detalle de Cuenta ========= -->
+  <div class="modal-overlay" id="modalAccountDetail">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 class="modal-title" id="accountDetailTitle">Detalle de Cuenta</h2>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-danger" id="btnDetailDeleteAccount" style="padding:.35rem .7rem;font-size:.8rem;"
+            title="Eliminar cuenta">🗑 Eliminar</button>
+          <button class="modal-close" id="btnCloseAccountDetail">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body-scroll">
+
+        <!-- Hero: icon + name + date -->
+        <div class="detail-hero">
+          <div class="detail-hero-icon" id="accountDetailIcon">🏦</div>
+          <div class="detail-hero-info">
+            <div class="detail-hero-name" id="accountDetailName">—</div>
+            <div class="detail-hero-sub" id="accountDetailSub">—</div>
+          </div>
+        </div>
+
+        <!-- Balance -->
+        <div class="detail-balance-block">
+          <p class="detail-balance-label">Saldo disponible</p>
+          <p class="detail-balance-amount" id="accountDetailBalance">$0.00</p>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="detail-actions">
+          <button class="btn btn-income" id="btnDetailIncome">
+            <span class="btn-icon">↑</span> Ingreso
+          </button>
+          <button class="btn btn-expense" id="btnDetailExpense">
+            <span class="btn-icon">↓</span> Gasto
+          </button>
+          <button class="btn btn-transfer" id="btnDetailTransfer">
+            <span class="btn-icon">⇄</span> Transferencia
+          </button>
+        </div>
+
+        <!-- Movements placeholder -->
+        <div class="movements-placeholder">
+          <span class="placeholder-icon">📊</span>
+          <strong>Reporte de movimientos</strong>
+          Próximamente verás aquí el historial y estadísticas de esta cuenta.
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Detalle de Crédito ========= -->
+  <div class="modal-overlay" id="modalCreditDetail">
+    <div class="modal modal-lg">
+      <div class="modal-header" style="border-left:3px solid var(--credit)">
+        <h2 class="modal-title" id="creditDetailTitle">Detalle de Crédito</h2>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-danger" id="btnDetailDeleteCredit" style="padding:.35rem .7rem;font-size:.8rem;"
+            title="Eliminar crédito">🗑 Eliminar</button>
+          <button class="modal-close" id="btnCloseCreditDetail">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body-scroll">
+
+        <!-- Hero: icon + name + days -->
+        <div class="detail-hero">
+          <div class="detail-hero-icon" id="creditDetailIcon">💳</div>
+          <div class="detail-hero-info">
+            <div class="detail-hero-name" id="creditDetailName">—</div>
+            <div class="detail-hero-sub" id="creditDetailSub">—</div>
+          </div>
+        </div>
+
+        <!-- Balance row -->
+        <div class="detail-balance-block">
+          <p class="detail-balance-label">Deuda actual / Límite</p>
+          <p class="detail-balance-amount" id="creditDetailBalance">$0.00</p>
+        </div>
+
+        <!-- Meta row: disponible, corte, pago -->
+        <div class="detail-meta-row">
+          <div class="detail-meta-item">
+            <p class="detail-balance-label">Disponible</p>
+            <p class="detail-meta-value" id="creditDetailAvailable" style="color:var(--income)">$0.00</p>
+          </div>
+          <div class="detail-meta-item">
+            <p class="detail-balance-label">Día de corte</p>
+            <p class="detail-meta-value" id="creditDetailCutDay">—</p>
+          </div>
+          <div class="detail-meta-item">
+            <p class="detail-balance-label">Límite de pago</p>
+            <p class="detail-meta-value" id="creditDetailPayDay">—</p>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="detail-actions">
+          <button class="btn btn-expense" id="btnDetailCargo">
+            <span class="btn-icon">📅</span> Cargo
+          </button>
+          <button class="btn btn-income" id="btnDetailAbono">
+            <span class="btn-icon">✅</span> Abono
+          </button>
+          <button class="btn btn-transfer" id="btnDetailPagar">
+            <span class="btn-icon">💳</span> Pagar
+          </button>
+        </div>
+
+        <!-- Movements placeholder -->
+        <div class="movements-placeholder">
+          <span class="placeholder-icon">📊</span>
+          <strong>Reporte de movimientos</strong>
+          Próximamente verás aquí el historial y estadísticas de este crédito.
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ========= MODAL: Nueva Cuenta ========= -->
   <div class="modal-overlay" id="modalNewAccount">
     <div class="modal">
@@ -434,8 +554,10 @@
     </div>
   </div>
 
+
   <!-- ========= TOAST ========= -->
   <div class="toast" id="toast"></div>
+
 
   <script src="app.js"></script>
   <!-- <script src="login.js"></script> -->
