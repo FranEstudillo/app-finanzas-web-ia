@@ -81,7 +81,7 @@ async function fetchData() {
 
 async function recordMovement({ accountId, accountName, accountIcon, type, amount, description, category }) {
   if(!currentUser) return;
-  await supabaseClient.from('movements').insert({
+  const { error } = await supabaseClient.from('movements').insert({
     user_id: currentUser.id,
     account_id: accountId,
     account_name: accountName,
@@ -91,6 +91,10 @@ async function recordMovement({ accountId, accountName, accountIcon, type, amoun
     description: description || '',
     category: category || ''
   });
+  if (error) {
+    console.error('Error insertando movimiento:', error);
+    showToast('⚠️ Error de historial: ' + error.message, 'error');
+  }
 }
 
 // ---- Category Picker Helper ----
@@ -266,7 +270,81 @@ function escapeHtml(str) {
 
 function formatDate(iso) {
   const d = new Date(iso);
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  const dateStr = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  return `${dateStr} ${timeStr}`;
+}
+
+// ---- LOAD MOVEMENTS ----
+async function loadMovements(accountId, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `
+    <div class="movements-placeholder" style="padding: 2rem 1rem">
+      <span class="placeholder-icon">⌛</span>
+      <strong style="margin-top: .5rem">Cargando...</strong>
+      Obteniendo historial de movimientos
+    </div>
+  `;
+  
+  const { data, error } = await supabaseClient
+    .from('movements')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `
+      <div class="movements-placeholder" style="border:none; padding: 2rem 1rem">
+        <span class="placeholder-icon" style="font-size: 2.5rem; opacity: 0.6; color: var(--danger)">⚠️</span>
+        <strong style="margin-top: .5rem">Error al obtener historial</strong>
+        <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--danger)">${escapeHtml(error.message)}</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.innerHTML = `
+      <div class="movements-placeholder" style="border:none; padding: 2rem 1rem">
+        <span class="placeholder-icon" style="font-size: 2.5rem; opacity: 0.6">📭</span>
+        <strong style="margin-top: .5rem">Sin movimientos</strong>
+        Aún no hay transacciones para mostrar
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `<div class="movements-container">
+    ${data.map(m => {
+      const isPositive = m.type === 'income' || m.type === 'pago';
+      const sign = isPositive ? '+' : '-';
+      const amountClass = isPositive ? 'positive' : 'negative';
+      
+      let displayIcon = m.type === 'income' ? '↑' : (m.type === 'expense' ? '↓' : (m.type === 'cargo' ? '📅' : '✅'));
+      
+      if (m.category) {
+        const catObj = EXPENSE_CATEGORIES.find(c => c.label === m.category);
+        if (catObj) displayIcon = catObj.emoji;
+      } else if (m.description && m.description.toLowerCase().includes('transfer')) {
+         displayIcon = '⇄';
+      }
+
+      const desc = m.category 
+        ? (m.description ? `${m.category} - ${m.description}` : m.category) 
+        : (m.description || (isPositive ? 'Abono/Ingreso' : 'Cargo/Gasto'));
+
+      return `
+        <div class="movement-item">
+          <div class="movement-icon">${displayIcon}</div>
+          <div class="movement-info">
+            <p class="movement-desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</p>
+            <p class="movement-date">${formatDate(m.created_at)}</p>
+          </div>
+          <div class="movement-amount ${amountClass}">${sign}${formatCurrency(m.amount)}</div>
+        </div>
+      `;
+    }).join('')}
+  </div>`;
 }
 
 // ---- ACCOUNT DETAIL MODAL ----
@@ -295,6 +373,8 @@ function openAccountDetail(accountId) {
   btnTransfer.onclick = () => openTransferModal(accountId);
   btnDelete.onclick   = () => openDeleteModal(accountId);
 
+  loadMovements(accountId, 'accountMovementsList');
+
   document.getElementById('modalAccountDetail').classList.add('open');
 }
 
@@ -311,6 +391,7 @@ function refreshAccountDetail() {
   const balEl = document.getElementById('accountDetailBalance');
   balEl.textContent = formatCurrency(acc.balance);
   balEl.className = 'detail-balance-amount' + (acc.balance > 0 ? ' positive' : acc.balance < 0 ? ' negative' : '');
+  loadMovements(activeAccountId, 'accountMovementsList');
 }
 
 // ---- CREDIT DETAIL MODAL ----
@@ -345,6 +426,8 @@ function openCreditDetail(creditId) {
   btnPagar.onclick  = () => openPayCreditModal(creditId);
   btnDelete.onclick = () => openDeleteCreditModal(creditId);
 
+  loadMovements(creditId, 'creditMovementsList');
+
   document.getElementById('modalCreditDetail').classList.add('open');
 }
 
@@ -363,6 +446,7 @@ function refreshCreditDetail() {
   balEl.textContent = `${formatCurrency(c.balance)} / ${formatCurrency(c.limit)}`;
   balEl.className = 'detail-balance-amount' + debtClass;
   document.getElementById('creditDetailAvailable').textContent = formatCurrency(available);
+  loadMovements(activeCreditId, 'creditMovementsList');
 }
 
 // ---- NEW ACCOUNT MODAL ----
