@@ -128,7 +128,7 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; }
 /* ---- Accounts Grid ---- */
 .accounts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1.2rem;
 }
 
@@ -484,7 +484,6 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; }
   .main { padding: 1.5rem 1rem 3rem; }
   .page-header { flex-direction: column; }
   .page-title { font-size: 1.5rem; }
-  .accounts-grid { grid-template-columns: 1fr; }
   .modal-lg { max-width: 100%; }
 }
 
