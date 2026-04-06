@@ -28,8 +28,10 @@
       <nav class="nav">
         <a class="nav-link active" href="#" id="tabCuentas" onclick="switchTab('cuentas')">Cuentas</a>
         <a class="nav-link" href="#" id="tabCreditos" onclick="switchTab('creditos')">Créditos</a>
+        <button class="btn btn-ghost" id="btnOpenSettings" onclick="openSettingsModal()"
+          style="font-size:.85rem; padding:.35rem .7rem; margin-left:.5rem;" title="Configuración">⚙️</button>
         <a class="nav-link" href="#" id="btnLogout"
-          style="color: var(--danger); font-size: 0.85rem; margin-left: 1rem;">Cerrar sesión</a>
+          style="color: var(--danger); font-size: 0.85rem; margin-left: .5rem;">Cerrar sesión</a>
       </nav>
     </div>
   </header>
@@ -303,6 +305,10 @@
             step="0.01" />
         </div>
         <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <div class="category-picker" id="incomeCategoryPicker"></div>
+        </div>
+        <div class="form-group">
           <label class="form-label" for="inputIncomeDesc">Descripción (opcional)</label>
           <input class="form-input" type="text" id="inputIncomeDesc" placeholder="Ej. Salario, freelance..." />
         </div>
@@ -558,6 +564,53 @@
     </div>
   </div>
 
+
+  <!-- ========= MODAL: Configuración ========= -->
+  <div class="modal-overlay" id="modalSettings">
+    <div class="modal modal-lg">
+      <div class="modal-header" style="border-left: 3px solid var(--accent)">
+        <h2 class="modal-title">⚙️ Configuración de Categorías</h2>
+        <button class="modal-close" id="btnCloseSettings">&times;</button>
+      </div>
+      <div class="modal-body-scroll">
+
+        <!-- Tabs -->
+        <div class="settings-tabs">
+          <button class="settings-tab income active" id="tabSettingsIncome"
+            onclick="switchSettingsTab('income')">↑ Ingresos</button>
+          <button class="settings-tab expense" id="tabSettingsExpense"
+            onclick="switchSettingsTab('expense')">↓ Gastos &amp; Cargos</button>
+        </div>
+
+        <!-- Panel: Ingresos -->
+        <div class="settings-section" id="settingsPanelIncome">
+          <p style="font-size:.8rem;color:var(--text-muted);">
+            Categorías disponibles al registrar un <strong style="color:var(--income)">ingreso</strong>.
+          </p>
+          <div class="settings-add-form">
+            <input class="emoji-input" type="text" id="inputIncomeCatEmoji" placeholder="😀" maxlength="2" />
+            <input class="form-input" type="text" id="inputIncomeCatLabel" placeholder="Nombre de categoría" />
+            <button class="btn btn-income" style="flex:none" onclick="addCategory('income')">+ Agregar</button>
+          </div>
+          <div class="settings-cat-list" id="incomeCatList"></div>
+        </div>
+
+        <!-- Panel: Gastos -->
+        <div class="settings-section" id="settingsPanelExpense" style="display:none">
+          <p style="font-size:.8rem;color:var(--text-muted);">
+            Categorías disponibles al registrar un <strong style="color:var(--expense)">gasto o cargo</strong>.
+          </p>
+          <div class="settings-add-form">
+            <input class="emoji-input" type="text" id="inputExpenseCatEmoji" placeholder="😀" maxlength="2" />
+            <input class="form-input" type="text" id="inputExpenseCatLabel" placeholder="Nombre de categoría" />
+            <button class="btn btn-expense" style="flex:none" onclick="addCategory('expense')">+ Agregar</button>
+          </div>
+          <div class="settings-cat-list" id="expenseCatList"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
   <!-- ========= TOAST ========= -->
   <div class="toast" id="toast"></div>

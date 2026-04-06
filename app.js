@@ -21,9 +21,19 @@ let activeCreditId = null;
 let selectedCreditIcon = '💳';
 let activeTab = 'cuentas';
 
-// ---- Expense Categories ----
-const EXPENSE_CATEGORIES = [
-  // { emoji: '💹', label: 'Ganancia' },
+// ---- Default Categories ----
+const DEFAULT_INCOME_CATEGORIES = [
+  { emoji: '💰', label: 'Salario' },
+  { emoji: '💼', label: 'Freelance' },
+  { emoji: '📈', label: 'Inversión' },
+  { emoji: '🎁', label: 'Regalo' },
+  { emoji: '🏠', label: 'Renta' },
+  { emoji: '💵', label: 'Venta' },
+  { emoji: '↩️', label: 'Reembolso' },
+  { emoji: '❓', label: 'Otro' },
+];
+
+const DEFAULT_EXPENSE_CATEGORIES = [
   { emoji: '🍔', label: 'Comida' },
   { emoji: '🏠', label: 'Hogar' },
   { emoji: '⛽', label: 'Gasolina' },
@@ -34,11 +44,17 @@ const EXPENSE_CATEGORIES = [
   { emoji: '✈️', label: 'Viajes' },
   { emoji: '💼', label: 'Trabajo' },
   { emoji: '🛒', label: 'Super' },
-  { emoji: '❓', label: 'Otro' }
-  // { emoji: '📚', label: 'Educación' },
+  { emoji: '❓', label: 'Otro' },
 ];
+
+// Mutable arrays — populated by initCategories() from localStorage
+let INCOME_CATEGORIES  = [];
+let EXPENSE_CATEGORIES = [];
+
 let selectedExpenseCategory = '';
-let selectedCargoCategory = '';
+let selectedCargoCategory   = '';
+let selectedIncomeCategory  = '';
+
 
 // ---- Auth Logic ----
 async function checkUser() {
@@ -98,25 +114,17 @@ async function recordMovement({ accountId, accountName, accountIcon, type, amoun
 }
 
 // ---- Category Picker Helper ----
-function renderCategoryPicker(containerId, currentSelected, onSelect) {
+function renderCategoryPicker(containerId, currentSelected, onSelect, categories) {
+  const cats = categories || EXPENSE_CATEGORIES;
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = EXPENSE_CATEGORIES.map(cat => {
+  container.innerHTML = cats.map(cat => {
     const isSelected = currentSelected === cat.label;
     return `<button type="button" class="cat-chip${isSelected ? ' selected' : ''}" data-label="${cat.label}">
       <span class="cat-emoji">${cat.emoji}</span>${cat.label}
     </button>`;
   }).join('');
-  container.addEventListener('click', e => {
-    const chip = e.target.closest('.cat-chip');
-    if (!chip) return;
-    const label = chip.dataset.label;
-    onSelect(label);
-    container.querySelectorAll('.cat-chip').forEach(c =>
-      c.classList.toggle('selected', c.dataset.label === label)
-    );
-  }, { once: true });
-  // re-attach for subsequent clicks (use event delegation properly)
+  container._cats = cats;
   container._onSelect = onSelect;
   container.onclick = e => {
     const chip = e.target.closest('.cat-chip');
@@ -129,8 +137,29 @@ function renderCategoryPicker(containerId, currentSelected, onSelect) {
   };
 }
 
+
 // ---- DB Key for Local Settings ----
-const DB_KEY_LABELS = 'finanzapp_labels';
+const DB_KEY_LABELS      = 'finanzapp_labels';
+const DB_KEY_CATEGORIES  = 'finanzapp_categories';
+
+// ---- Category Persistence ----
+function initCategories() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DB_KEY_CATEGORIES)) || {};
+    INCOME_CATEGORIES  = (stored.income  && stored.income.length  > 0) ? stored.income  : [...DEFAULT_INCOME_CATEGORIES];
+    EXPENSE_CATEGORIES = (stored.expense && stored.expense.length > 0) ? stored.expense : [...DEFAULT_EXPENSE_CATEGORIES];
+  } catch {
+    INCOME_CATEGORIES  = [...DEFAULT_INCOME_CATEGORIES];
+    EXPENSE_CATEGORIES = [...DEFAULT_EXPENSE_CATEGORIES];
+  }
+}
+
+function saveCategoriesToStorage() {
+  localStorage.setItem(DB_KEY_CATEGORIES, JSON.stringify({
+    income:  INCOME_CATEGORIES,
+    expense: EXPENSE_CATEGORIES,
+  }));
+}
 
 
 // ---- Navigation ----
@@ -323,7 +352,8 @@ async function loadMovements(accountId, containerId) {
       let displayIcon = m.type === 'income' ? '↑' : (m.type === 'expense' ? '↓' : (m.type === 'cargo' ? '📅' : '✅'));
       
       if (m.category) {
-        const catObj = EXPENSE_CATEGORIES.find(c => c.label === m.category);
+        const allCats = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
+        const catObj = allCats.find(c => c.label === m.category);
         if (catObj) displayIcon = catObj.emoji;
       } else if (m.description && m.description.toLowerCase().includes('transfer')) {
          displayIcon = '⇄';
@@ -497,6 +527,8 @@ function openIncomeModal(accountId) {
   document.getElementById('incomeAccountName').textContent = `${acc.icon}  ${acc.name}`;
   document.getElementById('inputIncomeAmount').value = '';
   document.getElementById('inputIncomeDesc').value = '';
+  selectedIncomeCategory = '';
+  renderCategoryPicker('incomeCategoryPicker', '', label => { selectedIncomeCategory = label; }, INCOME_CATEGORIES);
   document.getElementById('modalIncome').classList.add('open');
   setTimeout(() => document.getElementById('inputIncomeAmount').focus(), 150);
 }
@@ -519,7 +551,7 @@ async function saveIncome() {
   if (error) { showToast('⚠️ Error al actualizar', 'error'); return; }
 
   accounts[idx].balance = newBalance;
-  await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'income', amount, description: desc });
+  await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'income', amount, description: desc, category: selectedIncomeCategory });
   
   closeIncomeModal();
   render();
@@ -867,7 +899,7 @@ async function saveTransfer() {
   if (!destVal) { showToast('⚠️ Selecciona un destino', 'error'); return; }
 
   const destType = destVal.startsWith('acc_') ? 'account' : 'credit';
-  const destId = destVal.substring(4);
+  const destId = destType === 'account' ? destVal.substring(4) : destVal.substring(5);
   
   const originIdx = accounts.findIndex(a => a.id === activeAccountId);
   if (originIdx === -1) return;
@@ -986,6 +1018,90 @@ async function savePayCredit() {
   showToast(`💳 ${formatCurrency(amount)} pagados a ${dest.name}`);
 }
 
+// ---- SETTINGS MODAL ----
+let activeSettingsTab = 'income';
+
+function openSettingsModal() {
+  activeSettingsTab = 'income';
+  document.getElementById('tabSettingsIncome').classList.add('active');
+  document.getElementById('tabSettingsExpense').classList.remove('active');
+  document.getElementById('settingsPanelIncome').style.display = '';
+  document.getElementById('settingsPanelExpense').style.display = 'none';
+  // Clear inputs
+  document.getElementById('inputIncomeCatEmoji').value = '';
+  document.getElementById('inputIncomeCatLabel').value = '';
+  document.getElementById('inputExpenseCatEmoji').value = '';
+  document.getElementById('inputExpenseCatLabel').value = '';
+  renderSettingsCatList('income');
+  renderSettingsCatList('expense');
+  document.getElementById('modalSettings').classList.add('open');
+}
+
+function closeSettingsModal() {
+  document.getElementById('modalSettings').classList.remove('open');
+}
+
+function switchSettingsTab(tab) {
+  activeSettingsTab = tab;
+  const isIncome = tab === 'income';
+  document.getElementById('tabSettingsIncome').classList.toggle('active', isIncome);
+  document.getElementById('tabSettingsExpense').classList.toggle('active', !isIncome);
+  document.getElementById('settingsPanelIncome').style.display  = isIncome ? '' : 'none';
+  document.getElementById('settingsPanelExpense').style.display = isIncome ? 'none' : '';
+}
+
+function renderSettingsCatList(type) {
+  const listId  = type === 'income' ? 'incomeCatList' : 'expenseCatList';
+  const cats    = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const container = document.getElementById(listId);
+  if (!container) return;
+
+  if (cats.length === 0) {
+    container.innerHTML = `<div class="settings-empty">Sin categorías. Agrega una arriba.</div>`;
+    return;
+  }
+
+  container.innerHTML = cats.map((cat, idx) => `
+    <div class="settings-cat-item">
+      <span class="settings-cat-emoji">${escapeHtml(cat.emoji)}</span>
+      <span class="settings-cat-label">${escapeHtml(cat.label)}</span>
+      <button class="settings-cat-delete" title="Eliminar" onclick="deleteCategory('${type}', ${idx})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function addCategory(type) {
+  const emojiInput = document.getElementById(type === 'income' ? 'inputIncomeCatEmoji' : 'inputExpenseCatEmoji');
+  const labelInput = document.getElementById(type === 'income' ? 'inputIncomeCatLabel' : 'inputExpenseCatLabel');
+  const emoji = emojiInput.value.trim();
+  const label = labelInput.value.trim();
+
+  if (!label) { showToast('⚠️ Escribe un nombre para la categoría', 'error'); return; }
+  if (!emoji) { showToast('⚠️ Pon un emoji para la categoría', 'error'); return; }
+
+  const cats = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  // Avoid duplicate labels (case-insensitive)
+  if (cats.some(c => c.label.toLowerCase() === label.toLowerCase())) {
+    showToast('⚠️ Ya existe una categoría con ese nombre', 'error'); return;
+  }
+
+  cats.push({ emoji, label });
+  saveCategoriesToStorage();
+  renderSettingsCatList(type);
+  emojiInput.value = '';
+  labelInput.value = '';
+  showToast(`✅ Categoría "${label}" agregada`);
+}
+
+function deleteCategory(type, idx) {
+  const cats = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const removed = cats.splice(idx, 1)[0];
+  saveCategoriesToStorage();
+  renderSettingsCatList(type);
+  showToast(`🗑 Categoría "${removed.label}" eliminada`);
+}
+
 // ---- EVENT LISTENERS ----
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -1076,6 +1192,12 @@ document.addEventListener('DOMContentLoaded', () => {
     option.classList.add('selected');
     selectedCreditIcon = option.dataset.icon;
   });
+
+  // Settings
+  document.getElementById('btnCloseSettings').addEventListener('click', closeSettingsModal);
+
+  // Init categories from localStorage
+  initCategories();
 
   // Enter key support in modals
   document.getElementById('inputAccountName').addEventListener('keydown', e => { if (e.key === 'Enter') saveNewAccount(); });
