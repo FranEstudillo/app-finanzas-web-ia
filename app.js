@@ -952,6 +952,8 @@ async function saveTransfer() {
   closeTransferModal();
   render();
   renderCredits();
+  refreshAccountDetail();
+  refreshCreditDetail();
 }
 
 // ---- PAY CREDIT MODAL ----
@@ -1015,6 +1017,8 @@ async function savePayCredit() {
   closePayCreditModal();
   render();
   renderCredits();
+  refreshAccountDetail();
+  refreshCreditDetail();
   showToast(`💳 ${formatCurrency(amount)} pagados a ${dest.name}`);
 }
 
