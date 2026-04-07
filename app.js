@@ -553,7 +553,9 @@ async function saveIncome() {
   accounts[idx].balance = newBalance;
   await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'income', amount, description: desc, category: selectedIncomeCategory });
   
+  const _accId = activeAccountId;
   closeIncomeModal();
+  activeAccountId = _accId;
   render();
   refreshAccountDetail();
   showToast(`↑ +${formatCurrency(amount)} agregado`, 'income');
@@ -592,7 +594,9 @@ async function saveExpense() {
   accounts[idx].balance = newBalance;
   await recordMovement({ accountId: accounts[idx].id, accountName: accounts[idx].name, accountIcon: accounts[idx].icon, type: 'expense', amount, description: desc, category: selectedExpenseCategory });
   
+  const _accId = activeAccountId;
   closeExpenseModal();
+  activeAccountId = _accId;
   render();
   refreshAccountDetail();
   showToast(`↓ -${formatCurrency(amount)} restado`, 'expense');
@@ -776,7 +780,9 @@ async function saveCargo() {
   credits[idx].balance = newBalance;
   await recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'cargo', amount, description: desc, category: selectedCargoCategory });
   
+  const _credId = activeCreditId;
   closeCargoModal();
+  activeCreditId = _credId;
   renderCredits();
   refreshCreditDetail();
   showToast(`📅 Cargo de ${formatCurrency(amount)} registrado`, 'expense');
@@ -815,7 +821,9 @@ async function savePago() {
   credits[idx].balance = newBalance;
   await recordMovement({ accountId: credits[idx].id, accountName: credits[idx].name, accountIcon: credits[idx].icon, type: 'pago', amount, description: desc });
   
+  const _credId = activeCreditId;
   closePagoModal();
+  activeCreditId = _credId;
   renderCredits();
   refreshCreditDetail();
   showToast(`✅ Pago de ${formatCurrency(amount)} registrado`, 'income');
@@ -949,7 +957,9 @@ async function saveTransfer() {
     showToast(`✅ ${formatCurrency(amount)} abonados a ${dest.name}`);
   }
   
+  const _accId = activeAccountId;
   closeTransferModal();
+  activeAccountId = _accId;
   render();
   renderCredits();
   refreshAccountDetail();
@@ -1014,7 +1024,9 @@ async function savePayCredit() {
   await recordMovement({ accountId: origin.id, accountName: origin.name, accountIcon: origin.icon, type: 'expense', amount, description: `${desc} (${dest.name})` });
   await recordMovement({ accountId: dest.id, accountName: dest.name, accountIcon: dest.icon, type: 'pago', amount, description: `Abono desde cuenta ${origin.name}` });
   
+  const _credId = activeCreditId;
   closePayCreditModal();
+  activeCreditId = _credId;
   render();
   renderCredits();
   refreshAccountDetail();
