@@ -194,14 +194,31 @@
       <div class="page-header">
         <div>
           <h1 class="page-title">Pagos del mes</h1>
-          <p class="page-subtitle">Próximamente</p>
+          <p class="page-subtitle">Referencia rápida de gastos por quincena</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost pay-nav-btn" onclick="prevPayMonth()">‹</button>
+          <input class="form-input pay-month-input" type="month" id="payMonthInput"
+            onchange="changePayMonth(this.value)" />
+          <button class="btn btn-ghost pay-nav-btn" onclick="nextPayMonth()">›</button>
         </div>
       </div>
-      <div class="content-area">
+
+      <!-- Quincena tabs -->
+      <div class="pay-tabs">
+        <button class="pay-tab-btn active" id="payTab_q1" onclick="switchPayTab('q1')">
+          <span class="pay-tab-icon">1️⃣</span> Q1 · Día 1
+        </button>
+        <button class="pay-tab-btn" id="payTab_q2" onclick="switchPayTab('q2')">
+          <span class="pay-tab-icon">2️⃣</span> Q2 · Día 15
+        </button>
+      </div>
+
+      <!-- Dynamic content -->
+      <div class="pay-content" id="payQuincenaContent">
         <div class="empty-state">
           <div class="empty-icon">📅</div>
-          <h3>Próximamente</h3>
-          <p>Esta sección está en desarrollo</p>
+          <p>Cargando...</p>
         </div>
       </div>
     </div>
@@ -635,8 +652,8 @@
             <input class="form-input" type="number" id="inputPurchaseTotal" placeholder="0.00" min="0" step="0.01" />
           </div>
           <div class="form-group">
-            <label class="form-label">Saldo a cuenta</label>
-            <input class="form-input" type="number" id="inputPurchaseAccount" placeholder="0.00" min="0" />
+            <label class="form-label">Saldo en cuenta</label>
+            <input class="form-input" type="number" id="inputPurchaseAccount" placeholder="0.00" min="0" step="0.01" />
           </div>
         </div>
       </div>
@@ -675,8 +692,8 @@
             <input class="form-input" type="number" id="editPurchaseTotal" placeholder="0.00" min="0" step="0.01" />
           </div>
           <div class="form-group">
-            <label class="form-label">Saldo a cuenta</label>
-            <input class="form-input" type="number" id="editPurchaseAccount" placeholder="0.00" min="0" />
+            <label class="form-label">Saldo en cuenta</label>
+            <input class="form-input" type="number" id="editPurchaseAccount" placeholder="0.00" min="0" step="0.01" />
           </div>
         </div>
       </div>
@@ -743,6 +760,54 @@
           </div>
           <div class="settings-cat-list" id="expenseCatList"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Editar item de pago ========= -->
+  <div class="modal-overlay" id="modalEditPayItem">
+    <div class="modal">
+      <div class="modal-header modal-header-accent">
+        <h2 class="modal-title">✏️ Editar registro</h2>
+        <button class="modal-close" id="btnCloseEditPayItem">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Concepto</label>
+          <input class="form-input" type="text" id="editPayConcept" placeholder="Ej. Gasolina, Netflix..." />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Forma de pago</label>
+            <select class="form-input" id="editPayMethod" style="appearance:auto;font-family:inherit"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monto</label>
+            <input class="form-input" type="number" id="editPayAmount" placeholder="0.00" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dónde está el dinero</label>
+          <select class="form-input" id="editPayLocation" style="appearance:auto;font-family:inherit"></select>
+        </div>
+        <div class="form-row" style="align-items:center">
+          <div class="form-group">
+            <label class="form-label">Fecha de pago</label>
+            <input class="form-input" type="date" id="editPayDate" />
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label class="form-label">Ya se hizo el cobro</label>
+            <div style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem">
+              <input type="checkbox" id="editPayCharged"
+                style="width:18px;height:18px;accent-color:var(--income);cursor:pointer" />
+              <span style="font-size:.82rem;color:var(--text-secondary)">Marcar si ya fue cobrado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelEditPayItem">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveEditPayItem">Guardar</button>
       </div>
     </div>
   </div>
