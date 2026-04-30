@@ -289,12 +289,12 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; dis
 
 .modal {
   background: var(--bg-modal); border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg); width: 100%; max-width: 460px;
+  border-radius: var(--radius-lg); width: 100%; max-width: 640px;
   box-shadow: 0 24px 60px rgba(0,0,0,.7);
   animation: slideUp .2s ease;
 }
 .modal.modal-sm { max-width: 380px; }
-.modal.modal-lg { max-width: 640px; }
+.modal.modal-lg { max-width: 1080px; }
 
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
