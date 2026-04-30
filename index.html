@@ -8,125 +8,206 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
 
-
-  <!-- ========= HEADER ========= -->
-  <header class="header">
-    <div class="header-inner">
-      <div class="logo">
-        <span class="logo-icon">💰</span>
-        <span class="logo-text">FinanzApp</span>
-      </div>
-      <nav class="nav">
-        <a class="nav-link active" href="#" id="tabCuentas" onclick="switchTab('cuentas')">Cuentas</a>
-        <a class="nav-link" href="#" id="tabCreditos" onclick="switchTab('creditos')">Créditos</a>
-        <button class="btn btn-ghost" id="btnOpenSettings" onclick="openSettingsModal()"
-          style="font-size:.85rem; padding:.35rem .7rem; margin-left:.5rem;" title="Configuración">⚙️</button>
-        <a class="nav-link" href="#" id="btnLogout"
-          style="color: var(--danger); font-size: 0.85rem; margin-left: .5rem;">Cerrar sesión</a>
-      </nav>
-    </div>
-  </header>
-
-  <!-- ========= MAIN: CUENTAS ========= -->
-  <main class="main" id="sectionCuentas">
-
-    <!-- Page title + New-Account button -->
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Mis Cuentas</h1>
-        <p class="page-subtitle">Administra tus cuentas y montos disponibles</p>
-      </div>
-      <button class="btn btn-primary" id="btnNewAccount">
-        <span class="btn-icon">+</span> Nueva Cuenta
-      </button>
+  <!-- ========= SIDEBAR ========= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-icon">💰</span>
+      <span class="sidebar-logo-text">FinanzApp</span>
     </div>
 
-    <!-- Summary bar -->
-    <div class="summary-bar">
-      <div class="summary-card">
-        <p class="summary-label">Balance General</p>
-        <div class="summary-value-row">
-          <span class="summary-value" id="totalBalance">$0.00</span>
-          <button class="btn-edit-label" id="btnEditBalance" title="Ajustar monto"
-            onclick="startEditBalance()">✏️</button>
-          <input class="summary-balance-input" id="inputBalanceAmount" type="number" step="0.01" style="display:none"
-            onblur="saveBalance()"
-            onkeydown="if(event.key==='Enter')saveBalance();if(event.key==='Escape')cancelBalance()" />
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item" id="navCuentas" onclick="switchView('cuentas')">
+        <span class="nav-icon">🏦</span>
+        <span class="nav-text">Cuentas</span>
+      </div>
+      <div class="nav-item" id="navCreditos" onclick="switchView('creditos')">
+        <span class="nav-icon">💳</span>
+        <span class="nav-text">Créditos</span>
+      </div>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <div class="nav-section">
+      <div class="nav-label">Planificación</div>
+      <div class="nav-item" id="navPlanned" onclick="switchView('planned')">
+        <span class="nav-icon">🛒</span>
+        <span class="nav-text">Compras planif.</span>
+      </div>
+      <div class="nav-item" id="navPayments" onclick="switchView('payments')">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Pagos del mes</span>
+      </div>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <div class="nav-section">
+      <div class="nav-item" id="navSettings" onclick="openSettingsModal()">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-text">Categorías</span>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="nav-item" id="btnLogout">
+        <span class="nav-icon">→</span>
+        <span class="nav-text" style="color:var(--danger)">Cerrar sesión</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========= MAIN WRAPPER ========= -->
+  <div class="main-wrapper">
+
+    <!-- ===== VIEW: CUENTAS ===== -->
+    <div class="section-view" id="viewCuentas">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Mis Cuentas</h1>
+          <p class="page-subtitle">Administra tus cuentas y montos disponibles</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="btnNewAccount">
+            <span class="btn-icon">+</span> Nueva Cuenta
+          </button>
         </div>
       </div>
-      <div class="summary-card">
-        <p class="summary-label">Número de Cuentas</p>
-        <p class="summary-value" id="totalAccounts">0</p>
+
+      <div class="summary-bar">
+        <div class="summary-card">
+          <p class="summary-label">Balance General</p>
+          <div class="summary-value-row">
+            <span class="summary-value" id="totalBalance">$0.00</span>
+            <button class="btn-edit-label" id="btnEditBalance" title="Ajustar monto"
+              onclick="startEditBalance()">✏️</button>
+            <input class="summary-balance-input" id="inputBalanceAmount" type="number" step="0.01" style="display:none"
+              onblur="saveBalance()"
+              onkeydown="if(event.key==='Enter')saveBalance();if(event.key==='Escape')cancelBalance()" />
+          </div>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">Número de Cuentas</p>
+          <p class="summary-value" id="totalAccounts">0</p>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div class="accounts-grid" id="accountsGrid"></div>
+        <div class="empty-state" id="emptyState" style="display:none;">
+          <div class="empty-icon">🏦</div>
+          <h3>No tienes cuentas aún</h3>
+          <p>Agrega tu primera cuenta para empezar a controlar tus finanzas</p>
+          <button class="btn btn-primary" onclick="openNewAccountModal()">Crear primera cuenta</button>
+        </div>
       </div>
     </div>
 
-    <!-- Accounts grid -->
-    <div class="accounts-grid" id="accountsGrid">
-      <!-- Cards rendered by JS -->
-    </div>
-
-    <!-- Empty state -->
-    <div class="empty-state" id="emptyState" style="display:none;">
-      <div class="empty-icon">🏦</div>
-      <h3>No tienes cuentas aún</h3>
-      <p>Agrega tu primera cuenta para empezar a controlar tus finanzas</p>
-      <button class="btn btn-primary" onclick="openNewAccountModal()">Crear primera cuenta</button>
-    </div>
-
-  </main>
-
-  <!-- ========= MAIN: CRÉDITOS ========= -->
-  <main class="main" id="sectionCreditos" style="display:none;">
-
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Mis Créditos</h1>
-        <p class="page-subtitle">Administra tus tarjetas y líneas de crédito</p>
+    <!-- ===== VIEW: CRÉDITOS ===== -->
+    <div class="section-view" id="viewCreditos">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Mis Créditos</h1>
+          <p class="page-subtitle">Administra tus tarjetas y líneas de crédito</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-credit" id="btnNewCredit">
+            <span class="btn-icon">+</span> Nuevo Crédito
+          </button>
+        </div>
       </div>
-      <button class="btn btn-credit" id="btnNewCredit">
-        <span class="btn-icon">+</span> Nuevo Crédito
-      </button>
-    </div>
 
-    <!-- Credits summary bar -->
-    <div class="summary-bar">
-      <div class="summary-card">
-        <p class="summary-label">Deuda Total</p>
-        <p class="summary-value" id="totalDebt" style="color:var(--expense)">$0.00</p>
+      <div class="summary-bar">
+        <div class="summary-card">
+          <p class="summary-label">Deuda Total</p>
+          <p class="summary-value" id="totalDebt" style="color:var(--expense)">$0.00</p>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">Crédito Disponible</p>
+          <p class="summary-value" id="totalAvailable" style="color:var(--income)">$0.00</p>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">Número de Créditos</p>
+          <p class="summary-value" id="totalCredits">0</p>
+        </div>
       </div>
-      <div class="summary-card">
-        <p class="summary-label">Crédito Disponible</p>
-        <p class="summary-value" id="totalAvailable" style="color:var(--income)">$0.00</p>
-      </div>
-      <div class="summary-card">
-        <p class="summary-label">Número de Créditos</p>
-        <p class="summary-value" id="totalCredits">0</p>
+
+      <div class="content-area">
+        <div class="accounts-grid" id="creditsGrid"></div>
+        <div class="empty-state" id="emptyStateCredits" style="display:none;">
+          <div class="empty-icon">💳</div>
+          <h3>No tienes créditos aún</h3>
+          <p>Agrega tu primera tarjeta o línea de crédito</p>
+          <button class="btn btn-credit" onclick="openNewCreditModal()">Agregar crédito</button>
+        </div>
       </div>
     </div>
 
-    <!-- Credits grid -->
-    <div class="accounts-grid" id="creditsGrid">
-      <!-- Cards rendered by JS -->
+    <!-- ===== VIEW: COMPRAS PLANIFICADAS ===== -->
+    <div class="section-view" id="viewPlanned">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Compras planificadas</h1>
+          <p class="page-subtitle">Gestiona tus deudas y dispersiones por quincena</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost" onclick="openQuincenaManager()">📅 Quincenas</button>
+          <button class="btn btn-primary" onclick="openNewPurchaseModal()">
+            <span class="btn-icon">+</span> Nueva fila
+          </button>
+        </div>
+      </div>
+
+      <div class="pp-container">
+        <div class="pp-toolbar">
+          <div class="pp-summary-chips" id="ppSummaryChips">
+            <span class="pp-chip pp-chip-total" id="ppChipTotal">Total pendiente: $0</span>
+            <span class="pp-chip pp-chip-next" id="ppChipNext">Próxima quincena: $0</span>
+          </div>
+        </div>
+
+        <div class="pp-scroll">
+          <table class="pp-table" id="ppTable">
+            <thead id="ppTableHead"></thead>
+            <tbody id="ppTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="emptyStatePlanned" style="display:none;">
+          <div class="empty-icon">🛒</div>
+          <h3>Sin compras planificadas</h3>
+          <p>Agrega una fila para empezar a planificar tus pagos</p>
+          <button class="btn btn-primary" onclick="openNewPurchaseModal()">+ Nueva fila</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Empty state credits -->
-    <div class="empty-state" id="emptyStateCredits" style="display:none;">
-      <div class="empty-icon">💳</div>
-      <h3>No tienes créditos aún</h3>
-      <p>Agrega tu primera tarjeta o línea de crédito</p>
-      <button class="btn btn-credit" onclick="openNewCreditModal()">Agregar crédito</button>
+    <!-- ===== VIEW: PAGOS DEL MES ===== -->
+    <div class="section-view" id="viewPayments">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Pagos del mes</h1>
+          <p class="page-subtitle">Próximamente</p>
+        </div>
+      </div>
+      <div class="content-area">
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h3>Próximamente</h3>
+          <p>Esta sección está en desarrollo</p>
+        </div>
+      </div>
     </div>
 
-  </main>
+  </div><!-- end main-wrapper -->
+
 
   <!-- ========= MODAL: Detalle de Cuenta ========= -->
   <div class="modal-overlay" id="modalAccountDetail">
@@ -134,14 +215,12 @@
       <div class="modal-header">
         <h2 class="modal-title" id="accountDetailTitle">Detalle de Cuenta</h2>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <button class="btn btn-danger" id="btnDetailDeleteAccount" style="padding:.35rem .7rem;font-size:.8rem;"
-            title="Eliminar cuenta">🗑 Eliminar</button>
+          <button class="btn btn-danger" id="btnDetailDeleteAccount" style="padding:.3rem .65rem;font-size:.78rem;">🗑
+            Eliminar</button>
           <button class="modal-close" id="btnCloseAccountDetail">&times;</button>
         </div>
       </div>
       <div class="modal-body-scroll">
-
-        <!-- Hero: icon + name + date -->
         <div class="detail-hero">
           <div class="detail-hero-icon" id="accountDetailIcon">🏦</div>
           <div class="detail-hero-info">
@@ -149,27 +228,15 @@
             <div class="detail-hero-sub" id="accountDetailSub">—</div>
           </div>
         </div>
-
-        <!-- Balance -->
         <div class="detail-balance-block">
           <p class="detail-balance-label">Saldo disponible</p>
           <p class="detail-balance-amount" id="accountDetailBalance">$0.00</p>
         </div>
-
-        <!-- Action buttons -->
         <div class="detail-actions">
-          <button class="btn btn-income" id="btnDetailIncome">
-            <span class="btn-icon">↑</span> Ingreso
-          </button>
-          <button class="btn btn-expense" id="btnDetailExpense">
-            <span class="btn-icon">↓</span> Gasto
-          </button>
-          <button class="btn btn-transfer" id="btnDetailTransfer">
-            <span class="btn-icon">⇄</span> Transferencia
-          </button>
+          <button class="btn btn-income" id="btnDetailIncome"><span class="btn-icon">↑</span> Ingreso</button>
+          <button class="btn btn-expense" id="btnDetailExpense"><span class="btn-icon">↓</span> Gasto</button>
+          <button class="btn btn-transfer" id="btnDetailTransfer"><span class="btn-icon">⇄</span> Transferencia</button>
         </div>
-
-        <!-- Movements list -->
         <div id="accountMovementsList">
           <div class="movements-placeholder">
             <span class="placeholder-icon">📊</span>
@@ -177,7 +244,6 @@
             Cargando historial...
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -188,14 +254,12 @@
       <div class="modal-header" style="border-left:3px solid var(--credit)">
         <h2 class="modal-title" id="creditDetailTitle">Detalle de Crédito</h2>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <button class="btn btn-danger" id="btnDetailDeleteCredit" style="padding:.35rem .7rem;font-size:.8rem;"
-            title="Eliminar crédito">🗑 Eliminar</button>
+          <button class="btn btn-danger" id="btnDetailDeleteCredit" style="padding:.3rem .65rem;font-size:.78rem;">🗑
+            Eliminar</button>
           <button class="modal-close" id="btnCloseCreditDetail">&times;</button>
         </div>
       </div>
       <div class="modal-body-scroll">
-
-        <!-- Hero: icon + name + days -->
         <div class="detail-hero">
           <div class="detail-hero-icon" id="creditDetailIcon">💳</div>
           <div class="detail-hero-info">
@@ -203,14 +267,10 @@
             <div class="detail-hero-sub" id="creditDetailSub">—</div>
           </div>
         </div>
-
-        <!-- Balance row -->
         <div class="detail-balance-block">
           <p class="detail-balance-label">Deuda actual / Límite</p>
           <p class="detail-balance-amount" id="creditDetailBalance">$0.00</p>
         </div>
-
-        <!-- Meta row: disponible, corte, pago -->
         <div class="detail-meta-row">
           <div class="detail-meta-item">
             <p class="detail-balance-label">Disponible</p>
@@ -225,21 +285,11 @@
             <p class="detail-meta-value" id="creditDetailPayDay">—</p>
           </div>
         </div>
-
-        <!-- Action buttons -->
         <div class="detail-actions">
-          <button class="btn btn-expense" id="btnDetailCargo">
-            <span class="btn-icon">📅</span> Cargo
-          </button>
-          <button class="btn btn-income" id="btnDetailAbono">
-            <span class="btn-icon">✅</span> Abono
-          </button>
-          <button class="btn btn-transfer" id="btnDetailPagar">
-            <span class="btn-icon">💳</span> Pagar
-          </button>
+          <button class="btn btn-expense" id="btnDetailCargo"><span class="btn-icon">📅</span> Cargo</button>
+          <button class="btn btn-income" id="btnDetailAbono"><span class="btn-icon">✅</span> Abono</button>
+          <button class="btn btn-transfer" id="btnDetailPagar"><span class="btn-icon">💳</span> Pagar</button>
         </div>
-
-        <!-- Movements list -->
         <div id="creditMovementsList">
           <div class="movements-placeholder">
             <span class="placeholder-icon">📊</span>
@@ -247,7 +297,6 @@
             Cargando historial...
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -261,12 +310,11 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label" for="inputAccountName">Nombre de la cuenta</label>
-          <input class="form-input" type="text" id="inputAccountName"
-            placeholder="Ej. Cuenta de ahorros, Efectivo..." />
+          <label class="form-label">Nombre de la cuenta</label>
+          <input class="form-input" type="text" id="inputAccountName" placeholder="Ej. Cuenta de ahorros..." />
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputAccountIcon">Ícono</label>
+          <label class="form-label">Ícono</label>
           <div class="icon-picker" id="iconPicker">
             <span class="icon-option selected" data-icon="🏦">🏦</span>
             <span class="icon-option" data-icon="💳">💳</span>
@@ -279,7 +327,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputInitialBalance">Monto inicial</label>
+          <label class="form-label">Monto inicial</label>
           <input class="form-input" type="number" id="inputInitialBalance" placeholder="0.00" min="0" step="0.01" />
         </div>
       </div>
@@ -300,7 +348,7 @@
       <div class="modal-body">
         <p class="modal-account-name" id="incomeAccountName"></p>
         <div class="form-group">
-          <label class="form-label" for="inputIncomeAmount">Monto a ingresar</label>
+          <label class="form-label">Monto a ingresar</label>
           <input class="form-input input-income" type="number" id="inputIncomeAmount" placeholder="0.00" min="0.01"
             step="0.01" />
         </div>
@@ -309,7 +357,7 @@
           <div class="category-picker" id="incomeCategoryPicker"></div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputIncomeDesc">Descripción (opcional)</label>
+          <label class="form-label">Descripción (opcional)</label>
           <input class="form-input" type="text" id="inputIncomeDesc" placeholder="Ej. Salario, freelance..." />
         </div>
       </div>
@@ -330,7 +378,7 @@
       <div class="modal-body">
         <p class="modal-account-name" id="expenseAccountName"></p>
         <div class="form-group">
-          <label class="form-label" for="inputExpenseAmount">Monto del gasto</label>
+          <label class="form-label">Monto del gasto</label>
           <input class="form-input input-expense" type="number" id="inputExpenseAmount" placeholder="0.00" min="0.01"
             step="0.01" />
         </div>
@@ -339,7 +387,7 @@
           <div class="category-picker" id="expenseCategoryPicker"></div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputExpenseDesc">Descripción (opcional)</label>
+          <label class="form-label">Descripción (opcional)</label>
           <input class="form-input" type="text" id="inputExpenseDesc" placeholder="Ej. Supermercado, renta..." />
         </div>
       </div>
@@ -361,8 +409,7 @@
         <p class="modal-account-name" id="deleteAccountName"></p>
         <div class="delete-warning">
           <p>¿Estás seguro de que deseas eliminar esta cuenta?</p>
-          <p class="delete-warning-note">Los movimientos registrados <strong>no se borrarán</strong> y seguirán
-            disponibles en el historial.</p>
+          <p class="delete-warning-note">Los movimientos registrados <strong>no se borrarán</strong>.</p>
         </div>
       </div>
       <div class="modal-footer">
@@ -382,18 +429,15 @@
       <div class="modal-body">
         <p class="modal-account-name" id="transferOriginName"></p>
         <div class="form-group">
-          <label class="form-label" for="inputTransferAmount">Monto a transferir</label>
-          <input class="form-input" type="number" id="inputTransferAmount" placeholder="0.00" min="0.01" step="0.01"
-            style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
+          <label class="form-label">Monto a transferir</label>
+          <input class="form-input" type="number" id="inputTransferAmount" placeholder="0.00" min="0.01" step="0.01" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="selectTransferDest">Cuenta o Crédito destino</label>
-          <select class="form-input" id="selectTransferDest" style="appearance:auto; font-family:inherit">
-            <!-- Rendered by JS -->
-          </select>
+          <label class="form-label">Cuenta o Crédito destino</label>
+          <select class="form-input" id="selectTransferDest" style="appearance:auto;font-family:inherit"></select>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputTransferDesc">Descripción (opcional)</label>
+          <label class="form-label">Descripción (opcional)</label>
           <input class="form-input" type="text" id="inputTransferDesc" placeholder="Ej. Ahorro, pago de tarjeta..." />
         </div>
       </div>
@@ -414,20 +458,16 @@
       <div class="modal-body">
         <p class="modal-account-name" id="payCreditDestName"></p>
         <div class="form-group">
-          <label class="form-label" for="selectPayCreditOrigin">Cuenta Origen</label>
-          <select class="form-input" id="selectPayCreditOrigin" style="appearance:auto; font-family:inherit">
-            <!-- Rendered by JS -->
-          </select>
+          <label class="form-label">Cuenta Origen</label>
+          <select class="form-input" id="selectPayCreditOrigin" style="appearance:auto;font-family:inherit"></select>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputPayCreditAmount">Monto a pagar</label>
-          <input class="form-input" type="number" id="inputPayCreditAmount" placeholder="0.00" min="0.01" step="0.01"
-            style="color:var(--text-primary); font-size:1.2rem; font-weight:600" />
+          <label class="form-label">Monto a pagar</label>
+          <input class="form-input" type="number" id="inputPayCreditAmount" placeholder="0.00" min="0.01" step="0.01" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputPayCreditDesc">Concepto (opcional)</label>
-          <input class="form-input" type="text" id="inputPayCreditDesc"
-            placeholder="Ej. Pago mensual, saldo total..." />
+          <label class="form-label">Concepto (opcional)</label>
+          <input class="form-input" type="text" id="inputPayCreditDesc" placeholder="Ej. Pago mensual..." />
         </div>
       </div>
       <div class="modal-footer">
@@ -446,7 +486,7 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label" for="inputCreditName">Nombre del crédito</label>
+          <label class="form-label">Nombre del crédito</label>
           <input class="form-input" type="text" id="inputCreditName" placeholder="Ej. Visa Oro, Mastercard..." />
         </div>
         <div class="form-group">
@@ -463,20 +503,17 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputCreditLimit">Límite de crédito <span class="form-required"
-              style="color:var(--danger)">*</span></label>
+          <label class="form-label">Límite de crédito <span style="color:var(--danger)">*</span></label>
           <input class="form-input" type="number" id="inputCreditLimit" placeholder="0.00" min="0.01" step="0.01" />
         </div>
-        <div style="display: flex; gap: 1rem;">
-          <div class="form-group" style="flex:1;">
-            <label class="form-label" for="inputCreditCutDay">Día de corte</label>
-            <input class="form-input" type="number" id="inputCreditCutDay" placeholder="Ej. 15" min="1" max="31"
-              step="1" />
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Día de corte</label>
+            <input class="form-input" type="number" id="inputCreditCutDay" placeholder="Ej. 15" min="1" max="31" />
           </div>
-          <div class="form-group" style="flex:1;">
-            <label class="form-label" for="inputCreditPayDay">Día lím. de pago</label>
-            <input class="form-input" type="number" id="inputCreditPayDay" placeholder="Ej. 5" min="1" max="31"
-              step="1" />
+          <div class="form-group">
+            <label class="form-label">Día lím. de pago</label>
+            <input class="form-input" type="number" id="inputCreditPayDay" placeholder="Ej. 5" min="1" max="31" />
           </div>
         </div>
       </div>
@@ -497,7 +534,7 @@
       <div class="modal-body">
         <p class="modal-account-name" id="cargoCreditName"></p>
         <div class="form-group">
-          <label class="form-label" for="inputCargoAmount">Monto del cargo</label>
+          <label class="form-label">Monto del cargo</label>
           <input class="form-input input-expense" type="number" id="inputCargoAmount" placeholder="0.00" min="0.01"
             step="0.01" />
         </div>
@@ -506,7 +543,7 @@
           <div class="category-picker" id="cargoCategoryPicker"></div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputCargoDesc">Descripción (opcional)</label>
+          <label class="form-label">Descripción (opcional)</label>
           <input class="form-input" type="text" id="inputCargoDesc" placeholder="Ej. Restaurante, Amazon..." />
         </div>
       </div>
@@ -527,12 +564,12 @@
       <div class="modal-body">
         <p class="modal-account-name" id="pagoCreditName"></p>
         <div class="form-group">
-          <label class="form-label" for="inputPagoAmount">Monto del pago</label>
+          <label class="form-label">Monto del pago</label>
           <input class="form-input input-income" type="number" id="inputPagoAmount" placeholder="0.00" min="0.01"
             step="0.01" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputPagoDesc">Descripción (opcional)</label>
+          <label class="form-label">Descripción (opcional)</label>
           <input class="form-input" type="text" id="inputPagoDesc" placeholder="Ej. Pago mensual..." />
         </div>
       </div>
@@ -564,29 +601,131 @@
     </div>
   </div>
 
+  <!-- ========= MODAL: Nueva Compra Planificada ========= -->
+  <div class="modal-overlay" id="modalNewPurchase">
+    <div class="modal">
+      <div class="modal-header modal-header-accent">
+        <h2 class="modal-title">🛒 Nueva fila</h2>
+        <button class="modal-close" id="btnCloseNewPurchase">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Crédito</label>
+          <select class="form-input" id="selectPurchaseCredit" style="appearance:auto;font-family:inherit">
+            <option value="" disabled selected>Selecciona un crédito...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mes del periodo</label>
+          <input class="form-input" type="month" id="inputPurchaseMonth" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Fecha de corte</label>
+            <input class="form-input" type="date" id="inputPurchaseCutDate" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha límite de pago</label>
+            <input class="form-input" type="date" id="inputPurchasePayDate" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Saldo total</label>
+            <input class="form-input" type="number" id="inputPurchaseTotal" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Saldo a cuenta</label>
+            <input class="form-input" type="number" id="inputPurchaseAccount" placeholder="0.00" min="0" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelNewPurchase">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveNewPurchase">Guardar fila</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Editar Compra Planificada ========= -->
+  <div class="modal-overlay" id="modalEditPurchase">
+    <div class="modal">
+      <div class="modal-header modal-header-accent">
+        <h2 class="modal-title">✏️ Editar fila</h2>
+        <button class="modal-close" id="btnCloseEditPurchase">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Crédito</label>
+          <input class="form-input" id="editPurchaseCreditName" disabled style="opacity:.6" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Fecha de corte</label>
+            <input class="form-input" type="date" id="editPurchaseCutDate" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha límite de pago</label>
+            <input class="form-input" type="date" id="editPurchasePayDate" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Saldo total</label>
+            <input class="form-input" type="number" id="editPurchaseTotal" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Saldo a cuenta</label>
+            <input class="form-input" type="number" id="editPurchaseAccount" placeholder="0.00" min="0" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelEditPurchase">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveEditPurchase">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= MODAL: Gestión de Quincenas ========= -->
+  <div class="modal-overlay" id="modalQuincenas">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-accent">
+        <h2 class="modal-title">📅 Gestionar Quincenas</h2>
+        <button class="modal-close" id="btnCloseQuincenas">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.8rem;color:var(--text-secondary)">Las quincenas son siempre el día 15 y 30 de cada mes.
+          Agrega los meses que necesitas visualizar.</p>
+        <div class="q-manager-list" id="qManagerList"></div>
+        <div class="q-add-form">
+          <input class="form-input" type="month" id="inputNewQuincenaMonth" style="flex:1" />
+          <button class="btn btn-primary" onclick="addQuincenasForMonth()">+ Agregar</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCloseQuincenas2">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ========= MODAL: Configuración ========= -->
   <div class="modal-overlay" id="modalSettings">
     <div class="modal modal-lg">
-      <div class="modal-header" style="border-left: 3px solid var(--accent)">
+      <div class="modal-header" style="border-left:3px solid var(--accent)">
         <h2 class="modal-title">⚙️ Configuración de Categorías</h2>
         <button class="modal-close" id="btnCloseSettings">&times;</button>
       </div>
       <div class="modal-body-scroll">
-
-        <!-- Tabs -->
         <div class="settings-tabs">
-          <button class="settings-tab income active" id="tabSettingsIncome"
-            onclick="switchSettingsTab('income')">↑ Ingresos</button>
-          <button class="settings-tab expense" id="tabSettingsExpense"
-            onclick="switchSettingsTab('expense')">↓ Gastos &amp; Cargos</button>
+          <button class="settings-tab income active" id="tabSettingsIncome" onclick="switchSettingsTab('income')">↑
+            Ingresos</button>
+          <button class="settings-tab expense" id="tabSettingsExpense" onclick="switchSettingsTab('expense')">↓ Gastos
+            &amp; Cargos</button>
         </div>
-
-        <!-- Panel: Ingresos -->
         <div class="settings-section" id="settingsPanelIncome">
-          <p style="font-size:.8rem;color:var(--text-muted);">
-            Categorías disponibles al registrar un <strong style="color:var(--income)">ingreso</strong>.
-          </p>
+          <p style="font-size:.78rem;color:var(--text-muted)">Categorías para <strong
+              style="color:var(--income)">ingresos</strong>.</p>
           <div class="settings-add-form">
             <input class="emoji-input" type="text" id="inputIncomeCatEmoji" placeholder="😀" maxlength="2" />
             <input class="form-input" type="text" id="inputIncomeCatLabel" placeholder="Nombre de categoría" />
@@ -594,12 +733,9 @@
           </div>
           <div class="settings-cat-list" id="incomeCatList"></div>
         </div>
-
-        <!-- Panel: Gastos -->
         <div class="settings-section" id="settingsPanelExpense" style="display:none">
-          <p style="font-size:.8rem;color:var(--text-muted);">
-            Categorías disponibles al registrar un <strong style="color:var(--expense)">gasto o cargo</strong>.
-          </p>
+          <p style="font-size:.78rem;color:var(--text-muted)">Categorías para <strong
+              style="color:var(--expense)">gastos y cargos</strong>.</p>
           <div class="settings-add-form">
             <input class="emoji-input" type="text" id="inputExpenseCatEmoji" placeholder="😀" maxlength="2" />
             <input class="form-input" type="text" id="inputExpenseCatLabel" placeholder="Nombre de categoría" />
@@ -607,7 +743,6 @@
           </div>
           <div class="settings-cat-list" id="expenseCatList"></div>
         </div>
-
       </div>
     </div>
   </div>
@@ -615,9 +750,7 @@
   <!-- ========= TOAST ========= -->
   <div class="toast" id="toast"></div>
 
-
   <script src="app.js"></script>
-  <!-- <script src="login.js"></script> -->
 </body>
 
 </html>
