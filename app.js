@@ -13,6 +13,14 @@ let accounts = [];
 let credits = [];
 let plannedPurchases = [];
 
+// Payments State
+let paymentConfig = null;
+let paymentSavings = [];
+let paymentItems = [];
+let activePayQuincena = "q1";
+const LS_PAY_TAB = "finanzapp_pay_tab";
+const LS_PAY_MONTH = "finanzapp_pay_month";
+
 let activeAccountId = null;
 let activeCreditId = null;
 let activePurchaseId = null;
@@ -87,7 +95,7 @@ async function logoutUser() {
 // ============================================================
 async function fetchData() {
   if (!currentUser) return;
-  const [resAcc, resCred, resPP] = await Promise.all([
+  const [resAcc, resCred, resPP, resCfg, resSav, resItems] = await Promise.all([
     supabaseClient
       .from("accounts")
       .select("*")
@@ -100,6 +108,20 @@ async function fetchData() {
       .from("planned_purchases")
       .select("*")
       .order("created_at", { ascending: true }),
+    supabaseClient
+      .from("payment_config")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .maybeSingle(),
+    supabaseClient
+      .from("payment_savings")
+      .select("*")
+      .eq("user_id", currentUser.id),
+    supabaseClient
+      .from("payment_items")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .order("sort_order", { ascending: true }),
   ]);
 
   if (resAcc.data) {
@@ -136,10 +158,21 @@ async function fetchData() {
       createdAt: p.created_at,
     }));
   }
+  if (resCfg.data) {
+    paymentConfig = {
+      id: resCfg.data.id,
+      monthlyIncome: parseFloat(resCfg.data.monthly_income) || 0,
+      savingsPct: parseFloat(resCfg.data.savings_pct) || 0,
+      fixedPct: parseFloat(resCfg.data.fixed_pct) || 0,
+    };
+  }
+  if (resSav.data) paymentSavings = resSav.data;
+  if (resItems.data) paymentItems = resItems.data;
 
   render();
   renderCredits();
   renderPlannedPurchases();
+  if (activeView === "payments") renderPayments();
 }
 
 async function recordMovement({
@@ -200,6 +233,7 @@ function switchView(viewId) {
   if (viewId === "cuentas") render();
   if (viewId === "creditos") renderCredits();
   if (viewId === "planned") renderPlannedPurchases();
+  if (viewId === "payments") renderPayments();
 }
 
 // ============================================================
@@ -2088,6 +2122,498 @@ function deleteCategory(type, idx) {
 }
 
 // ============================================================
+// PAYMENTS MODULE
+// ============================================================
+
+// ---- Helpers ----
+function getActivePayMonth() {
+  const stored = localStorage.getItem(LS_PAY_MONTH);
+  if (stored) return stored;
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function setActivePayMonth(val) {
+  localStorage.setItem(LS_PAY_MONTH, val);
+}
+
+function getQuincenaLabel(q, month) {
+  const [y, m] = month.split("-");
+  const day = q === "q1" ? "01" : "15";
+  const monthNames = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+  return `${q === "q1" ? "Q1" : "Q2"} · ${day} ${monthNames[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function getPayQuincenaItems(month, quincena, type) {
+  return paymentItems.filter(
+    (i) => i.month === month && i.quincena === quincena && i.item_type === type,
+  );
+}
+
+function getPaySavings(month, quincena) {
+  return (
+    paymentSavings.find((s) => s.month === month && s.quincena === quincena) ||
+    null
+  );
+}
+
+function buildMoneyLocationOptions(selectedVal) {
+  const opts = [
+    { value: "empty", label: "— Vacía" },
+    { value: "paid", label: "✓ Pagado" },
+  ];
+  accounts.forEach((a) =>
+    opts.push({ value: `acc_${a.id}`, label: `${a.icon} ${a.name}` }),
+  );
+  credits.forEach((c) =>
+    opts.push({ value: `cred_${c.id}`, label: `${c.icon} ${c.name}` }),
+  );
+  return opts
+    .map(
+      (o) =>
+        `<option value="${o.value}"${o.value === selectedVal ? " selected" : ""}>${escapeHtml(o.label)}</option>`,
+    )
+    .join("");
+}
+
+function buildPaymentMethodOptions(selectedVal) {
+  const opts = [{ value: "", label: "—" }];
+  accounts.forEach((a) =>
+    opts.push({ value: `acc_${a.id}`, label: `${a.icon} ${a.name}` }),
+  );
+  credits.forEach((c) =>
+    opts.push({ value: `cred_${c.id}`, label: `${c.icon} ${c.name}` }),
+  );
+  return opts
+    .map(
+      (o) =>
+        `<option value="${o.value}"${o.value === selectedVal ? " selected" : ""}>${escapeHtml(o.label)}</option>`,
+    )
+    .join("");
+}
+
+function resolveLocationLabel(val) {
+  if (!val || val === "empty") return { label: "Vacía", cls: "loc-empty" };
+  if (val === "paid") return { label: "Pagado", cls: "loc-paid" };
+  if (val.startsWith("acc_")) {
+    const acc = accounts.find((a) => `acc_${a.id}` === val);
+    return acc
+      ? { label: `${acc.icon} ${acc.name}`, cls: "loc-account" }
+      : { label: val, cls: "" };
+  }
+  if (val.startsWith("cred_")) {
+    const cr = credits.find((c) => `cred_${c.id}` === val);
+    return cr
+      ? { label: `${cr.icon} ${cr.name}`, cls: "loc-credit" }
+      : { label: val, cls: "" };
+  }
+  return { label: val, cls: "" };
+}
+
+function resolveMethodLabel(val) {
+  if (!val) return "—";
+  if (val.startsWith("acc_")) {
+    const acc = accounts.find((a) => `acc_${a.id}` === val);
+    return acc ? `${acc.icon} ${acc.name}` : val;
+  }
+  if (val.startsWith("cred_")) {
+    const cr = credits.find((c) => `cred_${c.id}` === val);
+    return cr ? `${cr.icon} ${cr.name}` : val;
+  }
+  return val;
+}
+
+// ---- Main render ----
+function renderPayments() {
+  const month = getActivePayMonth();
+
+  // Sync month input
+  const monthInput = document.getElementById("payMonthInput");
+  if (monthInput) monthInput.value = month;
+
+  // Restore last active quincena
+  const storedTab = localStorage.getItem(LS_PAY_TAB);
+  if (storedTab) activePayQuincena = storedTab;
+
+  // Render tabs
+  ["q1", "q2"].forEach((q) => {
+    const btn = document.getElementById(`payTab_${q}`);
+    if (btn) btn.classList.toggle("active", q === activePayQuincena);
+  });
+
+  renderPayQuincena(month, activePayQuincena);
+}
+
+function switchPayTab(q) {
+  activePayQuincena = q;
+  localStorage.setItem(LS_PAY_TAB, q);
+  renderPayments();
+}
+
+function renderPayQuincena(month, quincena) {
+  const container = document.getElementById("payQuincenaContent");
+  if (!container) return;
+
+  const quincenal = paymentConfig ? paymentConfig.monthlyIncome / 2 : 0;
+  const savingsAmt = paymentConfig
+    ? Math.round((quincenal * paymentConfig.savingsPct) / 100)
+    : 0;
+  const fixedBudget = paymentConfig
+    ? Math.round((quincenal * paymentConfig.fixedPct) / 100)
+    : 0;
+
+  const savings = getPaySavings(month, quincena);
+  const fixedItems = getPayQuincenaItems(month, quincena, "fixed");
+  const varItems = getPayQuincenaItems(month, quincena, "variable");
+
+  const fixedTotal = fixedItems.reduce(
+    (s, i) => s + (parseFloat(i.amount) || 0),
+    0,
+  );
+  const varTotal = varItems.reduce(
+    (s, i) => s + (parseFloat(i.amount) || 0),
+    0,
+  );
+
+  container.innerHTML = `
+    <!-- ① AHORRO -->
+    <div class="pay-section">
+      <div class="pay-savings-row">
+        <label class="pay-savings-check">
+          <input type="checkbox" id="savingsCheck"
+            ${savings && savings.checked ? "checked" : ""}
+            onchange="toggleSavings('${month}','${quincena}',this.checked)" />
+          <span class="pay-savings-box"></span>
+        </label>
+        <div class="pay-savings-text">
+          <span class="pay-savings-label">Ahorro quincenal</span>
+          ${
+            paymentConfig
+              ? `<span class="pay-savings-amount">${formatCurrency(savingsAmt)}</span>
+               <span class="pay-savings-pct">(${paymentConfig.savingsPct}% de ${formatCurrency(quincenal)})</span>`
+              : `<span class="pay-savings-pct">Sin configurar</span>`
+          }
+        </div>
+        ${
+          savings && savings.checked
+            ? `<span class="pay-savings-done">✓ Transferido</span>`
+            : ""
+        }
+      </div>
+    </div>
+
+    <!-- ② GASTOS FIJOS -->
+    <div class="pay-section">
+      <div class="pay-section-header">
+        <div class="pay-section-title">
+          <span class="pay-section-icon">📌</span> Gastos Fijos
+          ${
+            paymentConfig
+              ? `<span class="pay-budget-chip">${formatCurrency(fixedBudget)} presupuesto · ${formatCurrency(fixedTotal)} usado</span>`
+              : ""
+          }
+        </div>
+        <button class="btn btn-ghost pay-add-btn" onclick="addPayItem('${month}','${quincena}','fixed')">+ Agregar</button>
+      </div>
+      <div class="pay-table-wrap">
+        ${renderPayTable(fixedItems, month, quincena, "fixed")}
+      </div>
+    </div>
+
+    <!-- ③ GASTOS VARIABLES -->
+    <div class="pay-section">
+      <div class="pay-section-header">
+        <div class="pay-section-title">
+          <span class="pay-section-icon">🔄</span> Gastos Variables
+          <span class="pay-budget-chip">${formatCurrency(varTotal)} total</span>
+        </div>
+        <button class="btn btn-ghost pay-add-btn" onclick="addPayItem('${month}','${quincena}','variable')">+ Agregar</button>
+      </div>
+      <div class="pay-table-wrap">
+        ${renderPayTable(varItems, month, quincena, "variable")}
+      </div>
+    </div>
+  `;
+}
+
+function renderPayTable(items, month, quincena, type) {
+  if (items.length === 0) {
+    return `<div class="pay-empty">Sin registros · <button class="pay-link-btn" onclick="addPayItem('${month}','${quincena}','${type}')">Agregar uno</button></div>`;
+  }
+
+  const rows = items
+    .map((item) => {
+      const loc = resolveLocationLabel(item.money_location);
+      const method = resolveMethodLabel(item.payment_method);
+      const payDate = item.pay_date
+        ? new Date(item.pay_date + "T00:00:00").toLocaleDateString("es-MX", {
+            day: "2-digit",
+            month: "short",
+          })
+        : "—";
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isOverdue =
+        item.pay_date &&
+        !item.already_charged &&
+        new Date(item.pay_date + "T00:00:00") < today &&
+        item.money_location !== "paid";
+
+      return `<tr class="pay-row${item.already_charged ? " pay-row-charged" : ""}${isOverdue ? " pay-row-overdue" : ""}" data-id="${item.id}">
+      <td class="pay-td pay-td-concept">
+        <span class="pay-concept-text" title="${escapeHtml(item.concept)}">${escapeHtml(item.concept) || '<em style="color:var(--text-muted)">Sin concepto</em>'}</span>
+      </td>
+      <td class="pay-td pay-td-method">
+        <span class="pay-method-chip">${escapeHtml(method)}</span>
+      </td>
+      <td class="pay-td pay-td-amount">
+        ${formatCurrency(item.amount)}
+      </td>
+      <td class="pay-td pay-td-location">
+        <span class="pay-loc-badge ${loc.cls}">${escapeHtml(loc.label)}</span>
+      </td>
+      <td class="pay-td pay-td-charged">
+        <input type="checkbox" class="pay-check" title="Ya se hizo el cobro"
+          ${item.already_charged ? "checked" : ""}
+          onchange="toggleCharged('${item.id}', this.checked)" />
+      </td>
+      <td class="pay-td pay-td-date ${isOverdue ? "pay-date-overdue" : ""}">
+        ${payDate}
+      </td>
+      <td class="pay-td pay-td-actions">
+        <button class="pay-action-btn" onclick="openEditPayItem('${item.id}')" title="Editar">✏️</button>
+        <button class="pay-action-btn pay-action-del" onclick="deletePayItem('${item.id}')" title="Eliminar">🗑</button>
+      </td>
+    </tr>`;
+    })
+    .join("");
+
+  const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+
+  return `<table class="pay-table">
+    <thead>
+      <tr>
+        <th class="pay-th" style="width:28%">Concepto</th>
+        <th class="pay-th" style="width:16%">Forma de pago</th>
+        <th class="pay-th" style="width:12%">Monto</th>
+        <th class="pay-th" style="width:18%">Dónde está</th>
+        <th class="pay-th" style="width:8%" title="Ya se hizo el cobro">Cobro</th>
+        <th class="pay-th" style="width:12%">F. pago</th>
+        <th class="pay-th" style="width:6%"></th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2" class="pay-tfoot-label">Total</td>
+        <td class="pay-tfoot-total">${formatCurrency(total)}</td>
+        <td colspan="4"></td>
+      </tr>
+    </tfoot>
+  </table>`;
+}
+
+// ---- Savings toggle ----
+async function toggleSavings(month, quincena, checked) {
+  if (!currentUser) return;
+  const existing = getPaySavings(month, quincena);
+  if (existing) {
+    const { error } = await supabaseClient
+      .from("payment_savings")
+      .update({ checked })
+      .eq("id", existing.id);
+    if (error) {
+      showToast("⚠️ Error al guardar", "error");
+      return;
+    }
+    existing.checked = checked;
+  } else {
+    const { data, error } = await supabaseClient
+      .from("payment_savings")
+      .insert({ user_id: currentUser.id, month, quincena, checked })
+      .select();
+    if (error) {
+      showToast("⚠️ Error al guardar", "error");
+      return;
+    }
+    paymentSavings.push(data[0]);
+  }
+  renderPayments();
+}
+
+// ---- Charged toggle ----
+async function toggleCharged(itemId, checked) {
+  const { error } = await supabaseClient
+    .from("payment_items")
+    .update({ already_charged: checked })
+    .eq("id", itemId);
+  if (error) {
+    showToast("⚠️ Error al guardar", "error");
+    return;
+  }
+  const idx = paymentItems.findIndex((i) => i.id === itemId);
+  if (idx !== -1) paymentItems[idx].already_charged = checked;
+  // Re-render only the table rows without full page flicker
+  renderPayments();
+}
+
+// ---- Add item ----
+async function addPayItem(month, quincena, type) {
+  if (!currentUser) return;
+  const { data, error } = await supabaseClient
+    .from("payment_items")
+    .insert({
+      user_id: currentUser.id,
+      month,
+      quincena,
+      item_type: type,
+      concept: "",
+      payment_method: "",
+      amount: 0,
+      money_location: "empty",
+      already_charged: false,
+      pay_date: null,
+      sort_order: paymentItems.filter(
+        (i) =>
+          i.month === month && i.quincena === quincena && i.item_type === type,
+      ).length,
+    })
+    .select();
+  if (error) {
+    showToast("⚠️ Error al agregar", "error");
+    return;
+  }
+  paymentItems.push(data[0]);
+  renderPayments();
+  // Auto-open edit modal for the new row
+  openEditPayItem(data[0].id);
+}
+
+// ---- Edit item modal ----
+let activePayItemId = null;
+
+function openEditPayItem(itemId) {
+  activePayItemId = itemId;
+  const item = paymentItems.find((i) => i.id === itemId);
+  if (!item) return;
+
+  document.getElementById("editPayConcept").value = item.concept || "";
+  document.getElementById("editPayMethod").innerHTML =
+    buildPaymentMethodOptions(item.payment_method || "");
+  document.getElementById("editPayAmount").value = item.amount || "";
+  document.getElementById("editPayLocation").innerHTML =
+    buildMoneyLocationOptions(item.money_location || "empty");
+  document.getElementById("editPayCharged").checked = !!item.already_charged;
+  document.getElementById("editPayDate").value = item.pay_date || "";
+
+  document.getElementById("modalEditPayItem").classList.add("open");
+  setTimeout(() => document.getElementById("editPayConcept").focus(), 150);
+}
+
+function closeEditPayItem() {
+  document.getElementById("modalEditPayItem").classList.remove("open");
+  activePayItemId = null;
+}
+
+async function saveEditPayItem() {
+  if (!activePayItemId) return;
+  const idx = paymentItems.findIndex((i) => i.id === activePayItemId);
+  if (idx === -1) return;
+
+  const concept = document.getElementById("editPayConcept").value.trim();
+  const paymentMethod = document.getElementById("editPayMethod").value;
+  const amount =
+    parseFloat(document.getElementById("editPayAmount").value) || 0;
+  const moneyLocation = document.getElementById("editPayLocation").value;
+  const alreadyCharged = document.getElementById("editPayCharged").checked;
+  const payDate = document.getElementById("editPayDate").value || null;
+
+  const { error } = await supabaseClient
+    .from("payment_items")
+    .update({
+      concept,
+      payment_method: paymentMethod,
+      amount,
+      money_location: moneyLocation,
+      already_charged: alreadyCharged,
+      pay_date: payDate,
+    })
+    .eq("id", activePayItemId);
+
+  if (error) {
+    showToast("⚠️ Error al guardar", "error");
+    return;
+  }
+
+  paymentItems[idx] = {
+    ...paymentItems[idx],
+    concept,
+    payment_method: paymentMethod,
+    amount,
+    money_location: moneyLocation,
+    already_charged: alreadyCharged,
+    pay_date: payDate,
+  };
+
+  closeEditPayItem();
+  renderPayments();
+  showToast("✅ Guardado");
+}
+
+// ---- Delete item ----
+async function deletePayItem(itemId) {
+  if (!confirm("¿Eliminar este registro?")) return;
+  const { error } = await supabaseClient
+    .from("payment_items")
+    .delete()
+    .eq("id", itemId);
+  if (error) {
+    showToast("⚠️ Error al eliminar", "error");
+    return;
+  }
+  paymentItems = paymentItems.filter((i) => i.id !== itemId);
+  renderPayments();
+  showToast("🗑 Eliminado");
+}
+
+// ---- Month navigation ----
+function changePayMonth(val) {
+  setActivePayMonth(val);
+  renderPayments();
+}
+
+function prevPayMonth() {
+  const current = getActivePayMonth();
+  const [y, m] = current.split("-").map(Number);
+  const prev =
+    m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+  setActivePayMonth(prev);
+  renderPayments();
+}
+
+function nextPayMonth() {
+  const current = getActivePayMonth();
+  const [y, m] = current.split("-").map(Number);
+  const next =
+    m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  setActivePayMonth(next);
+  renderPayments();
+}
+
+// ============================================================
 // EVENT LISTENERS
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
@@ -2323,6 +2849,17 @@ document.addEventListener("DOMContentLoaded", () => {
     .addEventListener("keydown", (e) => {
       if (e.key === "Enter") savePayCredit();
     });
+
+  // Pay Item Modal
+  document
+    .getElementById("btnCloseEditPayItem")
+    .addEventListener("click", closeEditPayItem);
+  document
+    .getElementById("btnCancelEditPayItem")
+    .addEventListener("click", closeEditPayItem);
+  document
+    .getElementById("btnSaveEditPayItem")
+    .addEventListener("click", saveEditPayItem);
 
   // Init app
   switchView("cuentas");
