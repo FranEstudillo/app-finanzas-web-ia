@@ -1007,3 +1007,55 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; dis
   .pay-content { padding: 1rem; }
   .pay-tabs { padding: 0 1rem; }
 }
+
+/* ========= BANK CHIP ========= */
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.bank-chip {
+  display: inline-block;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: .18rem .55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--chip-color);
+  background: color-mix(in srgb, var(--chip-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-color) 35%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color) 20%, transparent);
+}
+
+/* ---- Color Picker ---- */
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.color-option {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.color-option:hover {
+  outline-color: var(--border-light);
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  outline-color: var(--text-primary);
+  transform: scale(1.1);
+}

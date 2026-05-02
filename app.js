@@ -26,6 +26,7 @@ let activeCreditId = null;
 let activePurchaseId = null;
 let selectedIcon = "🏦";
 let selectedCreditIcon = "💳";
+let selectedBankColor = "#6c63ff";
 let balanceOffset = 0;
 let _prevBalanceOffset = 0;
 
@@ -131,6 +132,8 @@ async function fetchData() {
       icon: a.icon,
       balance: a.balance,
       createdAt: a.created_at,
+      bankName: a.bank_name || "",
+      bankColor: a.bank_color || "#6c63ff",
     }));
   }
   if (resCred.data) {
@@ -387,11 +390,17 @@ function render() {
     .map((acc) => {
       const balClass =
         acc.balance > 0 ? "positive" : acc.balance < 0 ? "negative" : "";
+      const bankChip = acc.bankName
+        ? `<span class="bank-chip" style="--chip-color:${escapeHtml(acc.bankColor)}">${escapeHtml(acc.bankName)}</span>`
+        : "";
       return `<div class="account-card" onclick="openAccountDetail('${acc.id}')">
       <div class="card-header">
         <span class="card-icon">${acc.icon}</span>
-        <div style="flex:1">
-          <p class="card-title">${escapeHtml(acc.name)}</p>
+        <div style="flex:1;min-width:0">
+          <div class="card-title-row">
+            <p class="card-title">${escapeHtml(acc.name)}</p>
+            ${bankChip}
+          </div>
           <p class="card-subtitle">Creada ${formatDate(acc.createdAt)}</p>
         </div>
       </div>
@@ -1288,11 +1297,18 @@ async function loadMovements(accountId, containerId) {
 function openNewAccountModal() {
   document.getElementById("inputAccountName").value = "";
   document.getElementById("inputInitialBalance").value = "";
+  document.getElementById("inputBankName").value = "";
   selectedIcon = "🏦";
+  selectedBankColor = "#6c63ff";
   document
     .querySelectorAll("#iconPicker .icon-option")
     .forEach((el) =>
       el.classList.toggle("selected", el.dataset.icon === selectedIcon),
+    );
+  document
+    .querySelectorAll("#bankColorPicker .color-option")
+    .forEach((el) =>
+      el.classList.toggle("selected", el.dataset.color === selectedBankColor),
     );
   document.getElementById("modalNewAccount").classList.add("open");
   setTimeout(() => document.getElementById("inputAccountName").focus(), 150);
@@ -1307,6 +1323,7 @@ async function saveNewAccount() {
   const name = document.getElementById("inputAccountName").value.trim();
   const initial =
     parseFloat(document.getElementById("inputInitialBalance").value) || 0;
+  const bankName = document.getElementById("inputBankName").value.trim();
   if (!name) {
     showToast("⚠️ Ingresa un nombre", "error");
     return;
@@ -1323,6 +1340,8 @@ async function saveNewAccount() {
       name,
       icon: selectedIcon,
       balance: initial,
+      bank_name: bankName,
+      bank_color: selectedBankColor,
     })
     .select();
   if (error) {
@@ -1330,7 +1349,16 @@ async function saveNewAccount() {
     return;
   }
 
-  accounts.push(data[0]);
+  const a = data[0];
+  accounts.push({
+    id: a.id,
+    name: a.name,
+    icon: a.icon,
+    balance: a.balance,
+    createdAt: a.created_at,
+    bankName: a.bank_name || "",
+    bankColor: a.bank_color || "#6c63ff",
+  });
   closeNewAccountModal();
   render();
   showToast(`✅ Cuenta "${name}" creada`);
@@ -2758,6 +2786,16 @@ document.addEventListener("DOMContentLoaded", () => {
       .forEach((el) => el.classList.remove("selected"));
     opt.classList.add("selected");
     selectedCreditIcon = opt.dataset.icon;
+  });
+  // Bank color picker
+  document.getElementById("bankColorPicker").addEventListener("click", (e) => {
+    const opt = e.target.closest(".color-option");
+    if (!opt) return;
+    document
+      .querySelectorAll("#bankColorPicker .color-option")
+      .forEach((el) => el.classList.remove("selected"));
+    opt.classList.add("selected");
+    selectedBankColor = opt.dataset.color;
   });
 
   // New Purchase

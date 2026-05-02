@@ -344,6 +344,27 @@
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">Banco <span
+              style="color:var(--text-muted);font-weight:400;text-transform:none">(opcional)</span></label>
+          <input class="form-input" type="text" id="inputBankName" placeholder="Ej. Nu, BBVA, Santander..."
+            maxlength="16" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color del chip</label>
+          <div class="color-picker" id="bankColorPicker">
+            <span class="color-option selected" data-color="#6c63ff" style="background:#6c63ff"></span>
+            <span class="color-option" data-color="#22d3a0" style="background:#22d3a0"></span>
+            <span class="color-option" data-color="#ff5c7c" style="background:#ff5c7c"></span>
+            <span class="color-option" data-color="#f59e0b" style="background:#f59e0b"></span>
+            <span class="color-option" data-color="#3b82f6" style="background:#3b82f6"></span>
+            <span class="color-option" data-color="#ec4899" style="background:#ec4899"></span>
+            <span class="color-option" data-color="#14b8a6" style="background:#14b8a6"></span>
+            <span class="color-option" data-color="#f97316" style="background:#f97316"></span>
+            <span class="color-option" data-color="#a855f7" style="background:#a855f7"></span>
+            <span class="color-option" data-color="#64748b" style="background:#64748b"></span>
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">Monto inicial</label>
           <input class="form-input" type="number" id="inputInitialBalance" placeholder="0.00" min="0" step="0.01" />
         </div>
