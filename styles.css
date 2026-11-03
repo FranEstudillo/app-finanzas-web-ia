@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    FinanzApp – Styles
    ============================================================ */
 
@@ -81,6 +81,23 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; dis
 
 .sidebar-logo-icon { font-size: 1.4rem; line-height: 1; }
 .sidebar-logo-text { font-size: 1.1rem; font-weight: 700; letter-spacing: -.4px; color: var(--text-primary); }
+
+.sidebar-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: .2rem .4rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+.sidebar-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--border);
+}
 
 .nav-section { padding: .25rem .75rem; }
 
@@ -687,14 +704,115 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; dis
 .settings-empty { text-align: center; padding: 1.3rem 1rem; color: var(--text-muted); font-size: .83rem; border: 2px dashed var(--border); border-radius: var(--radius-sm); }
 
 /* ========= RESPONSIVE ========= */
+
+/* --- Hamburger button (solo visible en móvil) --- */
+.mobile-topbar {
+  display: none;
+}
+
 @media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
-  .sidebar { transform: translateX(-220px); transition: transform .25s ease; width: 220px; }
-  .sidebar.open { transform: translateX(0); }
-  .main-wrapper { margin-left: 0; }
-  .page-header { padding: 1.2rem 1rem; }
-  .content-area { padding: 1.2rem 1rem; }
+
+  /* Topbar móvil */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1rem;
+    z-index: 200;
+  }
+
+  .mobile-topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .mobile-topbar-logo span:first-child { font-size: 1.3rem; }
+
+  .hamburger-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: .5rem;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+  }
+
+  .hamburger-btn:hover { background: var(--border); }
+
+  .hamburger-btn span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 999px;
+    transition: transform .25s ease, opacity .2s ease;
+    transform-origin: center;
+  }
+
+  /* Animación X al abrir */
+  .hamburger-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .hamburger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .sidebar-close-btn {
+    display: block;
+  }
+
+  /* Sidebar deslizante */
+  .sidebar {
+    transform: translateX(-240px);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    width: 240px;
+    z-index: 250;
+    box-shadow: none;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0,0,0,.6);
+  }
+
+  /* Overlay oscuro detras del sidebar */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(2px);
+    z-index: 240;
+    opacity: 0;
+    transition: opacity .28s ease;
+  }
+
+  .sidebar-backdrop.open {
+    display: block;
+    opacity: 1;
+  }
+
+  /* Main wrapper con offset del topbar fijo */
+  .main-wrapper {
+    margin-left: 0;
+    padding-top: 56px;
+  }
+
+  /* Ajustes de layout */
+  .page-header { padding: 1.1rem 1rem; }
+  .content-area { padding: 1rem; }
   .pp-toolbar { padding: .75rem 1rem; }
+<<<<<<< HEAD
   .summary-bar { padding: 1rem; }
 }
 
@@ -1058,4 +1176,31 @@ body { background: var(--bg); color: var(--text-primary); min-height: 100vh; dis
 .color-option.selected {
   outline-color: var(--text-primary);
   transform: scale(1.1);
+=======
+  .summary-bar { padding: .85rem 1rem; gap: .65rem; }
+
+  /* Cards en columna en pantallas chicas */
+  .accounts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modals como sheet desde abajo */
+  .modal, .modal.modal-sm, .modal.modal-lg {
+    max-width: 100%;
+    margin: 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-body-scroll {
+    max-height: 70vh;
+  }
+
+  /* Toast */
+  .toast { bottom: 1.5rem; font-size: .8rem; }
+>>>>>>> eacde85 (Vista celular corregida)
 }

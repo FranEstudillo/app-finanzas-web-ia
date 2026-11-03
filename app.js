@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    FinanzApp – app.js
    ============================================================ */
 
@@ -2903,4 +2903,47 @@ document.addEventListener("DOMContentLoaded", () => {
   switchView("cuentas");
   checkUser();
   applyStoredOffset();
+
+  // ============================================================
+  // MOBILE HAMBURGER MENU
+  // ============================================================
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+  const sidebarEl = document.getElementById("sidebar");
+  const backdrop = document.getElementById("sidebarBackdrop");
+
+  function openMobileMenu() {
+    sidebarEl.classList.add("open");
+    backdrop.classList.add("open");
+    hamburgerBtn.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeMobileMenu() {
+    sidebarEl.classList.remove("open");
+    backdrop.classList.remove("open");
+    hamburgerBtn.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  if (hamburgerBtn) {
+    hamburgerBtn.addEventListener("click", () => {
+      sidebarEl.classList.contains("open") ? closeMobileMenu() : openMobileMenu();
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeMobileMenu);
+  }
+
+  const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+  if (sidebarCloseBtn) {
+    sidebarCloseBtn.addEventListener("click", closeMobileMenu);
+  }
+
+  // Cerrar al navegar en móvil
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      if (window.innerWidth <= 768) closeMobileMenu();
+    });
+  });
 });

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -13,6 +13,22 @@
 </head>
 
 <body>
+
+  <!-- ========= MOBILE TOPBAR (solo visible en móvil) ========= -->
+  <div class="mobile-topbar" id="mobileTopbar">
+    <div class="mobile-topbar-logo">
+      <span>💰</span>
+      <span>FinanzApp</span>
+    </div>
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Abrir menú">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+
+  <!-- Backdrop para cerrar el sidebar al tocar fuera -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <!-- ========= SIDEBAR ========= -->
   <aside class="sidebar" id="sidebar">
@@ -37,13 +53,19 @@
 
     <div class="nav-section">
       <div class="nav-label">Planificación</div>
+      <!-- HIDDEN: navPlanned - Compras planificadas (temporalmente oculto)
       <div class="nav-item" id="navPlanned" onclick="switchView('planned')">
         <span class="nav-icon">🛒</span>
         <span class="nav-text">Compras planif.</span>
       </div>
-      <div class="nav-item" id="navPayments" onclick="switchView('payments')">
+      -->
+      <!-- <div class="nav-item" id="navPayments" onclick="switchView('payments')">
         <span class="nav-icon">📅</span>
         <span class="nav-text">Pagos del mes</span>
+      </div> -->
+      <div class="nav-item" id="navPayments">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Próximamente</span>
       </div>
     </div>
 
@@ -150,8 +172,9 @@
       </div>
     </div>
 
-    <!-- ===== VIEW: COMPRAS PLANIFICADAS ===== -->
-    <div class="section-view" id="viewPlanned">
+    <!-- ===== VIEW: COMPRAS PLANIFICADAS (HIDDEN) ===== -->
+    <!--PLANNED-HIDDEN-START-->
+    <div class="section-view" id="viewPlanned" style="display:none!important">
       <div class="page-header">
         <div>
           <h1 class="page-title">Compras planificadas</h1>
